@@ -12,6 +12,8 @@ import { useLocation } from '@/hooks/useLocation';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 
+const OPENCAGE_KEY = '96a6de4c85854c548ce4a9f21b902045'; // tu key OpenCage
+
 export default function HomeScreen() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [forecast, setForecast] = useState<ForecastData[]>([]);
@@ -19,27 +21,59 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showCitySearch, setShowCitySearch] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+  const [locationData, setLocationData] = useState<LocationData | null>(null);
+
   const { location, loading: locationLoading, error: locationError, refreshLocation } = useLocation();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
   useEffect(() => {
     if (location) {
-      loadWeatherData();
+      getCityFromCoords(location.latitude, location.longitude);
     }
   }, [location]);
 
-  const loadWeatherData = async () => {
-    if (!location) return;
+  const getCityFromCoords = async (lat: number, lng: number) => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lng}&key=${OPENCAGE_KEY}&no_annotations=1&language=es`
+      );
+      const data = await response.json();
+      if (data && data.results && data.results.length > 0) {
+        const components = data.results[0].components;
+        setLocationData({
+          latitude: lat,
+          longitude: lng,
+          city: components.city || components.town || components.village || 'Ubicación desconocida',
+          country: components.country || '',
+        });
+        await loadWeatherData(lat, lng);
+      } else {
+        setError('No se pudo obtener la ciudad desde las coordenadas');
+      }
+    } catch (err) {
+      console.error('Error OpenCage:', err);
+      setError('Error al obtener ciudad desde OpenCage');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadWeatherData = async (lat?: number, lng?: number) => {
+    if ((!lat || !lng) && locationData) {
+      lat = locationData.latitude;
+      lng = locationData.longitude;
+    }
+    if (!lat || !lng) return;
 
     try {
       setLoading(true);
       setError(null);
-      
+
       const [currentWeather, forecastData] = await Promise.all([
-        WeatherService.getCurrentWeather(location.latitude, location.longitude),
-        WeatherService.getForecast(location.latitude, location.longitude, 5)
+        WeatherService.getCurrentWeather(lat, lng),
+        WeatherService.getForecast(lat, lng, 5),
       ]);
 
       setWeather(currentWeather);
@@ -56,14 +90,14 @@ export default function HomeScreen() {
     setRefreshing(true);
     await refreshLocation();
     if (location) {
-      await loadWeatherData();
+      await getCityFromCoords(location.latitude, location.longitude);
     }
     setRefreshing(false);
   };
 
   const handleLocationSelect = (newLocation: LocationData) => {
-    // Actualizar la ubicación y recargar datos
-    loadWeatherData();
+    setLocationData(newLocation);
+    loadWeatherData(newLocation.latitude, newLocation.longitude);
   };
 
   const handleLocationError = () => {
@@ -82,9 +116,7 @@ export default function HomeScreen() {
       <ThemedView style={styles.errorContainer}>
         <IconSymbol name="location.slash" size={60} color="#FF6B6B" />
         <ThemedText style={styles.errorTitle}>Error de Ubicación</ThemedText>
-        <ThemedText style={styles.errorMessage}>
-          {locationError}
-        </ThemedText>
+        <ThemedText style={styles.errorMessage}>{locationError}</ThemedText>
         <TouchableOpacity style={styles.retryButton} onPress={handleLocationError}>
           <ThemedText style={styles.retryButtonText}>Buscar Ciudad</ThemedText>
         </TouchableOpacity>
@@ -102,7 +134,7 @@ export default function HomeScreen() {
         <IconSymbol name="exclamationmark.triangle" size={60} color="#FF6B6B" />
         <ThemedText style={styles.errorTitle}>Error</ThemedText>
         <ThemedText style={styles.errorMessage}>{error}</ThemedText>
-        <TouchableOpacity style={styles.retryButton} onPress={loadWeatherData}>
+        <TouchableOpacity style={styles.retryButton} onPress={handleLocationError}>
           <ThemedText style={styles.retryButtonText}>Reintentar</ThemedText>
         </TouchableOpacity>
       </ThemedView>
@@ -121,15 +153,13 @@ export default function HomeScreen() {
   return (
     <ScrollView
       style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
     >
-      {weather && location && (
+      {weather && locationData && (
         <WeatherCard
           weather={weather}
-          city={location.city || 'Ubicación desconocida'}
-          country={location.country}
+          city={locationData.city}
+          country={locationData.country}
         />
       )}
 
@@ -159,55 +189,19 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
-  errorTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorMessage: {
-    fontSize: 16,
-    textAlign: 'center',
-    opacity: 0.7,
-    marginBottom: 24,
-  },
-  retryButton: {
-    backgroundColor: '#007BFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  forecastContainer: {
-    marginTop: 8,
-  },
-  forecastHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  forecastTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  searchButton: {
-    padding: 8,
-    backgroundColor: 'rgba(0, 123, 255, 0.1)',
-    borderRadius: 8,
-  },
+  errorTitle: { fontSize: 24, fontWeight: 'bold', marginTop: 16, marginBottom: 8 },
+  errorMessage: { fontSize: 16, textAlign: 'center', opacity: 0.7, marginBottom: 24 },
+  retryButton: { backgroundColor: '#007BFF', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  retryButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
+  forecastContainer: { marginTop: 8 },
+  forecastHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+  forecastTitle: { fontSize: 20, fontWeight: 'bold' },
+  searchButton: { padding: 8, backgroundColor: 'rgba(0, 123, 255, 0.1)', borderRadius: 8 },
 });
