@@ -1,98 +1,213 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { WeatherCard } from '@/components/weather/WeatherCard';
+import { ForecastItem } from '@/components/weather/ForecastItem';
+import { LoadingWeather } from '@/components/weather/LoadingWeather';
+import { CitySearch } from '@/components/weather/CitySearch';
+import { WeatherService, WeatherData, ForecastData, LocationData } from '@/services/weatherService';
+import { useLocation } from '@/hooks/useLocation';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [forecast, setForecast] = useState<ForecastData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showCitySearch, setShowCitySearch] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const { location, loading: locationLoading, error: locationError, refreshLocation } = useLocation();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
+  useEffect(() => {
+    if (location) {
+      loadWeatherData();
+    }
+  }, [location]);
+
+  const loadWeatherData = async () => {
+    if (!location) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [currentWeather, forecastData] = await Promise.all([
+        WeatherService.getCurrentWeather(location.latitude, location.longitude),
+        WeatherService.getForecast(location.latitude, location.longitude, 5)
+      ]);
+
+      setWeather(currentWeather);
+      setForecast(forecastData);
+    } catch (err) {
+      console.error('Error loading weather data:', err);
+      setError(err instanceof Error ? err.message : 'Error al cargar datos del clima');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshLocation();
+    if (location) {
+      await loadWeatherData();
+    }
+    setRefreshing(false);
+  };
+
+  const handleLocationSelect = (newLocation: LocationData) => {
+    // Actualizar la ubicación y recargar datos
+    loadWeatherData();
+  };
+
+  const handleLocationError = () => {
+    Alert.alert(
+      'Error de Ubicación',
+      'No se pudo obtener tu ubicación actual. Por favor, busca una ciudad manualmente.',
+      [
+        { text: 'Buscar Ciudad', onPress: () => setShowCitySearch(true) },
+        { text: 'Cancelar', style: 'cancel' }
+      ]
+    );
+  };
+
+  if (locationError) {
+    return (
+      <ThemedView style={styles.errorContainer}>
+        <IconSymbol name="location.slash" size={60} color="#FF6B6B" />
+        <ThemedText style={styles.errorTitle}>Error de Ubicación</ThemedText>
+        <ThemedText style={styles.errorMessage}>
+          {locationError}
         </ThemedText>
+        <TouchableOpacity style={styles.retryButton} onPress={handleLocationError}>
+          <ThemedText style={styles.retryButtonText}>Buscar Ciudad</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
+    );
+  }
+
+  if (locationLoading || loading) {
+    return <LoadingWeather message="Obteniendo tu ubicación y datos del clima..." />;
+  }
+
+  if (error) {
+    return (
+      <ThemedView style={styles.errorContainer}>
+        <IconSymbol name="exclamationmark.triangle" size={60} color="#FF6B6B" />
+        <ThemedText style={styles.errorTitle}>Error</ThemedText>
+        <ThemedText style={styles.errorMessage}>{error}</ThemedText>
+        <TouchableOpacity style={styles.retryButton} onPress={loadWeatherData}>
+          <ThemedText style={styles.retryButtonText}>Reintentar</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
-    </ParallaxScrollView>
+    );
+  }
+
+  if (showCitySearch) {
+    return (
+      <CitySearch
+        onLocationSelect={handleLocationSelect}
+        onClose={() => setShowCitySearch(false)}
+      />
+    );
+  }
+
+  return (
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+      }
+    >
+      {weather && location && (
+        <WeatherCard
+          weather={weather}
+          city={location.city || 'Ubicación desconocida'}
+          country={location.country}
+        />
+      )}
+
+      <ThemedView style={styles.forecastContainer}>
+        <View style={styles.forecastHeader}>
+          <ThemedText type="subtitle" style={styles.forecastTitle}>
+            Pronóstico 5 Días
+          </ThemedText>
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={() => setShowCitySearch(true)}
+          >
+            <IconSymbol name="magnifyingglass" size={20} color={colors.tint} />
+          </TouchableOpacity>
+        </View>
+
+        {forecast.map((day, index) => (
+          <ForecastItem
+            key={day.date}
+            forecast={day}
+            isToday={index === 0}
+          />
+        ))}
+      </ThemedView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 16,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  errorMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    opacity: 0.7,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#007BFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  forecastContainer: {
+    marginTop: 8,
+  },
+  forecastHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  forecastTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  searchButton: {
+    padding: 8,
+    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+    borderRadius: 8,
   },
 });

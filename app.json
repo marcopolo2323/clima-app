@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "clima-app",
+    "name": "Clima App",
     "slug": "clima-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -37,6 +37,12 @@
           "dark": {
             "backgroundColor": "#000000"
           }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Esta aplicación necesita acceso a tu ubicación para mostrar el clima actual de tu zona."
         }
       ]
     ],

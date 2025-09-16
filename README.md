@@ -1,50 +1,118 @@
-# Welcome to your Expo app 👋
+# 🌤️ Clima App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Una aplicación del clima moderna y minimalista construida con React Native y Expo, utilizando la API gratuita de Open-Meteo.
 
-## Get started
+## ✨ Características
 
-1. Install dependencies
+- **Clima actual**: Temperatura, humedad, viento, presión atmosférica, visibilidad e índice UV
+- **Pronóstico extendido**: Pronóstico de 5-7 días con temperaturas máximas y mínimas
+- **Búsqueda de ciudades**: Busca cualquier ciudad del mundo
+- **Ubicación automática**: Obtiene automáticamente tu ubicación actual
+- **Animaciones**: Iconos animados que reflejan las condiciones climáticas
+- **Modo oscuro/claro**: Soporte automático para temas
+- **Consejos del clima**: Recomendaciones basadas en las condiciones actuales
+- **Información técnica**: Datos meteorológicos detallados
 
+## 🚀 Instalación
+
+1. Clona el repositorio
+   ```bash
+   git clone <url-del-repositorio>
+   cd clima-app
+   ```
+
+2. Instala las dependencias
    ```bash
    npm install
    ```
 
-2. Start the app
-
+3. Inicia la aplicación
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+## 📱 Uso
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Pantalla Principal (Clima)
+- Muestra el clima actual de tu ubicación
+- Incluye temperatura, descripción y detalles meteorológicos
+- Pronóstico de 5 días con temperaturas y condiciones
+- Botón de búsqueda para cambiar de ciudad
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### Pantalla de Detalles
+- Consejos del clima basados en las condiciones actuales
+- Pronóstico extendido de 7 días
+- Información técnica detallada
+- Fuente de datos y credibilidad
 
-## Get a fresh project
+## 🛠️ Tecnologías Utilizadas
 
-When you're ready, run:
+- **React Native**: Framework para aplicaciones móviles
+- **Expo**: Plataforma de desarrollo y herramientas
+- **TypeScript**: Tipado estático para JavaScript
+- **Open-Meteo API**: API gratuita de datos meteorológicos
+- **Expo Location**: Servicios de ubicación
+- **React Native Reanimated**: Animaciones fluidas
+- **Expo Vector Icons**: Iconos del sistema
 
-```bash
-npm run reset-project
-```
+## 📊 API de Open-Meteo
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Esta aplicación utiliza la API gratuita de [Open-Meteo](https://open-meteo.com/), que proporciona:
 
-## Learn more
+- Datos meteorológicos en tiempo real
+- Pronósticos de hasta 16 días
+- Cobertura global
+- Sin necesidad de API key
+- Actualizaciones cada hora
 
-To learn more about developing your project with Expo, look at the following resources:
+## 🎨 Diseño
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+La aplicación sigue un diseño minimalista inspirado en las aplicaciones de clima más populares:
 
-## Join the community
+- **Colores**: Paleta suave que cambia según la temperatura
+- **Tipografía**: Fuentes del sistema para mejor legibilidad
+- **Iconos**: Iconos SF Symbols para iOS y Material Design para Android
+- **Animaciones**: Transiciones suaves y animaciones contextuales
+- **Responsive**: Adaptable a diferentes tamaños de pantalla
 
-Join our community of developers creating universal apps.
+## 🔧 Configuración
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Permisos de Ubicación
+La aplicación solicita permisos de ubicación para mostrar el clima de tu zona actual. Los permisos se configuran automáticamente en `app.json`.
+
+### Personalización
+Puedes personalizar:
+- Colores en `constants/theme.ts`
+- Iconos de clima en `services/weatherService.ts`
+- Animaciones en `components/weather/WeatherAnimation.tsx`
+
+## 📱 Compatibilidad
+
+- **iOS**: 13.0+
+- **Android**: API 21+
+- **Web**: Navegadores modernos
+
+## 🤝 Contribuciones
+
+Las contribuciones son bienvenidas. Por favor:
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
+
+## 🙏 Agradecimientos
+
+- [Open-Meteo](https://open-meteo.com/) por la API gratuita de datos meteorológicos
+- [Expo](https://expo.dev/) por las herramientas de desarrollo
+- [React Native](https://reactnative.dev/) por el framework
+- La comunidad de desarrolladores de React Native
+
+---
+
+Desarrollado con ❤️ usando React Native y Expo
