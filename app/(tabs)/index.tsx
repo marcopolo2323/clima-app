@@ -19,31 +19,53 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showCitySearch, setShowCitySearch] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   
-  const { location, loading: locationLoading, error: locationError, refreshLocation } = useLocation();
+  // Estado para manejar la ubicación seleccionada (puede ser diferente a la ubicación del GPS)
+  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
+  
+  const { location: deviceLocation, loading: locationLoading, error: locationError, refreshLocation } = useLocation();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  useEffect(() => {
-    if (location) {
-      loadWeatherData();
-    }
-  }, [location]);
+  // La ubicación actual es la seleccionada manualmente o la del dispositivo
+  const currentLocation = selectedLocation || deviceLocation;
 
-  const loadWeatherData = async () => {
+  useEffect(() => {
+    if (currentLocation) {
+      loadWeatherData(currentLocation);
+    }
+  }, [currentLocation]);
+
+  const loadWeatherData = async (location: LocationData) => {
     if (!location) return;
 
     try {
       setLoading(true);
       setError(null);
+      setLoadingProgress(0);
       
+      // Simular progreso de carga
+      const progressInterval = setInterval(() => {
+        setLoadingProgress(prev => Math.min(prev + 0.1, 0.8));
+      }, 100);
+
       const [currentWeather, forecastData] = await Promise.all([
         WeatherService.getCurrentWeather(location.latitude, location.longitude),
         WeatherService.getForecast(location.latitude, location.longitude, 5)
       ]);
 
+      clearInterval(progressInterval);
+      setLoadingProgress(1);
+
       setWeather(currentWeather);
       setForecast(forecastData);
+      
+      // Pequeño delay para mostrar el progreso completo
+      setTimeout(() => {
+        setLoadingProgress(0);
+      }, 500);
+
     } catch (err) {
       console.error('Error loading weather data:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar datos del clima');
@@ -54,16 +76,42 @@ export default function HomeScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await refreshLocation();
-    if (location) {
-      await loadWeatherData();
+    
+    if (selectedLocation) {
+      // Si hay una ubicación seleccionada manualmente, recargar esos datos
+      await loadWeatherData(selectedLocation);
+    } else {
+      // Si no hay ubicación manual, refrescar ubicación del dispositivo
+      await refreshLocation();
+      if (deviceLocation) {
+        await loadWeatherData(deviceLocation);
+      }
     }
+    
     setRefreshing(false);
   };
 
   const handleLocationSelect = (newLocation: LocationData) => {
-    // Actualizar la ubicación y recargar datos
-    loadWeatherData();
+    console.log('Nueva ubicación seleccionada:', newLocation);
+    setSelectedLocation(newLocation);
+    setShowCitySearch(false);
+    // loadWeatherData se llamará automáticamente por el useEffect que observa currentLocation
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (deviceLocation) {
+      setSelectedLocation(null); // Limpiar ubicación manual
+      // Esto hará que currentLocation vuelva a ser deviceLocation
+    } else {
+      Alert.alert(
+        'Ubicación no disponible',
+        'No se pudo obtener tu ubicación actual. Por favor, busca una ciudad manualmente.',
+        [
+          { text: 'Buscar Ciudad', onPress: () => setShowCitySearch(true) },
+          { text: 'Cancelar', style: 'cancel' }
+        ]
+      );
+    }
   };
 
   const handleLocationError = () => {
@@ -77,7 +125,8 @@ export default function HomeScreen() {
     );
   };
 
-  if (locationError) {
+  // Manejo de errores de ubicación
+  if (locationError && !selectedLocation) {
     return (
       <ThemedView style={styles.errorContainer}>
         <IconSymbol name="location.slash" size={60} color="#FF6B6B" />
@@ -92,23 +141,45 @@ export default function HomeScreen() {
     );
   }
 
-  if (locationLoading || loading) {
-    return <LoadingWeather message="Obteniendo tu ubicación y datos del clima..." />;
+  // Pantalla de carga con buscador integrado
+  if ((locationLoading && !selectedLocation) || loading) {
+    const loadingMessage = selectedLocation 
+      ? `Obteniendo clima de ${selectedLocation.name}...`
+      : 'Obteniendo tu ubicación y datos del clima...';
+      
+    return (
+      <LoadingWeather 
+        message={loadingMessage}
+        showSearchOption={true}
+        onLocationSelect={handleLocationSelect}
+        loadingProgress={loadingProgress > 0 ? loadingProgress : undefined}
+      />
+    );
   }
 
+  // Manejo de errores de datos del clima
   if (error) {
     return (
       <ThemedView style={styles.errorContainer}>
         <IconSymbol name="exclamationmark.triangle" size={60} color="#FF6B6B" />
         <ThemedText style={styles.errorTitle}>Error</ThemedText>
         <ThemedText style={styles.errorMessage}>{error}</ThemedText>
-        <TouchableOpacity style={styles.retryButton} onPress={loadWeatherData}>
-          <ThemedText style={styles.retryButtonText}>Reintentar</ThemedText>
-        </TouchableOpacity>
+        <View style={styles.errorButtons}>
+          <TouchableOpacity style={styles.retryButton} onPress={() => loadWeatherData(currentLocation!)}>
+            <ThemedText style={styles.retryButtonText}>Reintentar</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.retryButton, styles.searchButtonError]} 
+            onPress={() => setShowCitySearch(true)}
+          >
+            <ThemedText style={styles.retryButtonText}>Buscar otra ciudad</ThemedText>
+          </TouchableOpacity>
+        </View>
       </ThemedView>
     );
   }
 
+  // Pantalla de búsqueda de ciudades
   if (showCitySearch) {
     return (
       <CitySearch
@@ -118,6 +189,7 @@ export default function HomeScreen() {
     );
   }
 
+  // Pantalla principal con datos del clima
   return (
     <ScrollView
       style={styles.container}
@@ -125,11 +197,11 @@ export default function HomeScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
       }
     >
-      {weather && location && (
+      {weather && currentLocation && (
         <WeatherCard
           weather={weather}
-          city={location.city || 'Ubicación desconocida'}
-          country={location.country}
+          city={currentLocation.city || currentLocation.name || 'Ubicación desconocida'}
+          country={currentLocation.country}
         />
       )}
 
@@ -138,13 +210,44 @@ export default function HomeScreen() {
           <ThemedText type="subtitle" style={styles.forecastTitle}>
             Pronóstico 5 Días
           </ThemedText>
-          <TouchableOpacity
-            style={styles.searchButton}
-            onPress={() => setShowCitySearch(true)}
-          >
-            <IconSymbol name="magnifyingglass" size={20} color={colors.tint} />
-          </TouchableOpacity>
+          
+          <View style={styles.headerButtons}>
+            {/* Botón para usar ubicación actual */}
+            {selectedLocation && deviceLocation && (
+              <TouchableOpacity
+                style={[styles.locationButton, { borderColor: colors.tint }]}
+                onPress={handleUseCurrentLocation}
+              >
+                <IconSymbol name="location.fill" size={16} color={colors.tint} />
+              </TouchableOpacity>
+            )}
+            
+            {/* Botón de búsqueda */}
+            <TouchableOpacity
+              style={styles.searchButton}
+              onPress={() => setShowCitySearch(true)}
+            >
+              <IconSymbol name="magnifyingglass" size={20} color={colors.tint} />
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {/* Indicador de ubicación actual */}
+        {currentLocation && (
+          <View style={styles.locationIndicator}>
+            <IconSymbol 
+              name={selectedLocation ? "map.fill" : "location.fill"} 
+              size={14} 
+              color={colors.icon} 
+            />
+            <ThemedText style={styles.locationText}>
+              {selectedLocation 
+                ? `Ubicación personalizada: ${selectedLocation.name}${selectedLocation.country ? `, ${selectedLocation.country}` : ''}`
+                : 'Ubicación actual'
+              }
+            </ThemedText>
+          </View>
+        )}
 
         {forecast.map((day, index) => (
           <ForecastItem
@@ -180,16 +283,26 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     marginBottom: 24,
   },
+  errorButtons: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 12,
+  },
   retryButton: {
     backgroundColor: '#007BFF',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
+    minWidth: 180,
+  },
+  searchButtonError: {
+    backgroundColor: '#6C757D',
   },
   retryButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+    textAlign: 'center',
   },
   forecastContainer: {
     marginTop: 8,
@@ -205,9 +318,32 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  locationButton: {
+    padding: 8,
+    borderWidth: 1,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 123, 255, 0.05)',
+  },
   searchButton: {
     padding: 8,
     backgroundColor: 'rgba(0, 123, 255, 0.1)',
     borderRadius: 8,
+  },
+  locationIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 6,
+  },
+  locationText: {
+    fontSize: 12,
+    opacity: 0.7,
+    fontStyle: 'italic',
   },
 });
