@@ -1,13 +1,16 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { WeatherData } from '@/services/weatherService';
-import { WeatherService } from '@/services/weatherService';
-import { WeatherAnimation } from './WeatherAnimation';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ModernCard } from '@/components/ui/ModernCard';
 import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { WeatherData } from '@/services/weatherService';
+import React from 'react';
+import { Dimensions, StyleSheet, View } from 'react-native';
+import { WeatherAnimation } from './WeatherAnimation';
+import { WeatherBackground } from './WeatherBackground';
+import { WeatherEffects } from './WeatherEffects';
+
+const { width } = Dimensions.get('window');
 
 interface WeatherCardProps {
   weather: WeatherData;
@@ -27,121 +30,161 @@ export function WeatherCard({ weather, city, country }: WeatherCardProps) {
     return '#FF6347'; // Rojo caliente
   };
 
+  const getUVColor = (uvIndex: number) => {
+    if (uvIndex <= 2) return colors.success;
+    if (uvIndex <= 5) return colors.warning;
+    if (uvIndex <= 7) return '#FF6B35';
+    if (uvIndex <= 10) return '#FF3B30';
+    return colors.error;
+  };
+
   return (
-    <ThemedView style={styles.container}>
-      {/* Header con ubicación */}
-      <View style={styles.header}>
-        <ThemedText type="title" style={styles.cityName}>
-          {city}
-        </ThemedText>
-        {country && (
-          <ThemedText style={styles.countryName}>
-            {country}
-          </ThemedText>
-        )}
-      </View>
-
-      {/* Temperatura principal */}
-      <View style={styles.temperatureContainer}>
-        <WeatherAnimation
-          weatherCode={weather.weatherCode}
-          size={80}
-        />
-        <View style={styles.temperatureInfo}>
-          <ThemedText type="title" style={[styles.temperature, { color: getTemperatureColor(weather.temperature) }]}>
-            {weather.temperature}°
-          </ThemedText>
-          <ThemedText style={styles.description}>
-            {weather.description}
-          </ThemedText>
+    <WeatherBackground weatherCode={weather.weatherCode}>
+      <WeatherEffects weatherCode={weather.weatherCode} />
+      <ModernCard 
+        variant="elevated" 
+        style={styles.container}
+        padding="large"
+        borderRadius="xl"
+      >
+        {/* Header con ubicación */}
+        <View style={styles.header}>
+          <View style={styles.locationInfo}>
+            <IconSymbol name="location.fill" size={20} color={colors.primary} />
+            <View style={styles.locationText}>
+              <ThemedText type="title" style={styles.cityName} numberOfLines={1}>
+                {city}
+              </ThemedText>
+              {country && (
+                <ThemedText style={styles.countryName} numberOfLines={1}>
+                  {country}
+                </ThemedText>
+              )}
+            </View>
+          </View>
         </View>
-      </View>
 
-      {/* Detalles del clima */}
-      <View style={styles.detailsContainer}>
-        <View style={styles.detailRow}>
-          <View style={styles.detailItem}>
-            <IconSymbol name="humidity.fill" size={20} color={colors.icon} />
-            <ThemedText style={styles.detailLabel}>Humedad</ThemedText>
-            <ThemedText style={styles.detailValue}>{weather.humidity}%</ThemedText>
+        {/* Temperatura principal */}
+        <View style={styles.temperatureSection}>
+          <View style={styles.temperatureMain}>
+            <WeatherAnimation
+              weatherCode={weather.weatherCode}
+              size={100}
+            />
+            <View style={styles.temperatureInfo}>
+              <ThemedText type="title" style={[styles.temperature, { color: getTemperatureColor(weather.temperature) }]}>
+                {weather.temperature}°
+              </ThemedText>
+              <ThemedText style={styles.description}>
+                {weather.description}
+              </ThemedText>
+            </View>
           </View>
           
-          <View style={styles.detailItem}>
-            <IconSymbol name="wind" size={20} color={colors.icon} />
-            <ThemedText style={styles.detailLabel}>Viento</ThemedText>
-            <ThemedText style={styles.detailValue}>
-              {weather.windSpeed} km/h {WeatherService.getWindDirection(weather.windDirection)}
-            </ThemedText>
+          {/* Sensación térmica y otros datos rápidos */}
+          <View style={styles.quickStats}>
+            <View style={styles.quickStatItem}>
+              <ThemedText style={styles.quickStatLabel}>Sensación</ThemedText>
+              <ThemedText style={[styles.quickStatValue, { color: getTemperatureColor(weather.temperature) }]}>
+                {weather.temperature}°
+              </ThemedText>
+            </View>
+            <View style={styles.quickStatItem}>
+              <ThemedText style={styles.quickStatLabel}>Humedad</ThemedText>
+              <ThemedText style={styles.quickStatValue}>{weather.humidity}%</ThemedText>
+            </View>
+            <View style={styles.quickStatItem}>
+              <ThemedText style={styles.quickStatLabel}>Viento</ThemedText>
+              <ThemedText style={styles.quickStatValue}>{weather.windSpeed} km/h</ThemedText>
+            </View>
           </View>
         </View>
 
-        <View style={styles.detailRow}>
-          <View style={styles.detailItem}>
-            <IconSymbol name="barometer" size={20} color={colors.icon} />
-            <ThemedText style={styles.detailLabel}>Presión</ThemedText>
-            <ThemedText style={styles.detailValue}>{weather.pressure} hPa</ThemedText>
+        {/* Detalles del clima en tarjetas circulares */}
+        <View style={styles.detailsGrid}>
+          <View style={styles.circularCard}>
+            <IconSymbol name="humidity.fill" size={28} color={colors.primary} />
+            <ThemedText style={styles.circularValue}>{weather.humidity}%</ThemedText>
+            <ThemedText style={styles.circularLabel}>Humedad</ThemedText>
           </View>
-          
-          <View style={styles.detailItem}>
-            <IconSymbol name="eye.fill" size={20} color={colors.icon} />
-            <ThemedText style={styles.detailLabel}>Visibilidad</ThemedText>
-            <ThemedText style={styles.detailValue}>{weather.visibility / 1000} km</ThemedText>
-          </View>
-        </View>
 
-        <View style={styles.detailRow}>
-          <View style={styles.detailItem}>
-            <IconSymbol name="sun.max.fill" size={20} color={colors.icon} />
-            <ThemedText style={styles.detailLabel}>Índice UV</ThemedText>
-            <ThemedText style={styles.detailValue}>
-              {weather.uvIndex} ({WeatherService.getUVIndexDescription(weather.uvIndex)})
+          <View style={styles.circularCard}>
+            <IconSymbol name="wind" size={28} color={colors.secondary} />
+            <ThemedText style={styles.circularValue}>{weather.windSpeed}</ThemedText>
+            <ThemedText style={styles.circularLabel}>km/h</ThemedText>
+          </View>
+
+          <View style={styles.circularCard}>
+            <IconSymbol name="barometer" size={28} color={colors.warning} />
+            <ThemedText style={styles.circularValue}>{weather.pressure}</ThemedText>
+            <ThemedText style={styles.circularLabel}>hPa</ThemedText>
+          </View>
+
+          <View style={styles.circularCard}>
+            <IconSymbol name="sun.max.fill" size={28} color={getUVColor(weather.uvIndex)} />
+            <ThemedText style={[styles.circularValue, { color: getUVColor(weather.uvIndex) }]}>
+              {weather.uvIndex}
             </ThemedText>
+            <ThemedText style={styles.circularLabel}>UV</ThemedText>
+          </View>
+
+          <View style={styles.circularCard}>
+            <IconSymbol name="eye.fill" size={28} color={colors.success} />
+            <ThemedText style={styles.circularValue}>{weather.visibility / 1000}</ThemedText>
+            <ThemedText style={styles.circularLabel}>km</ThemedText>
+          </View>
+
+          <View style={styles.circularCard}>
+            <IconSymbol name="thermometer" size={28} color={getTemperatureColor(weather.temperature)} />
+            <ThemedText style={[styles.circularValue, { color: getTemperatureColor(weather.temperature) }]}>
+              {weather.temperature}°
+            </ThemedText>
+            <ThemedText style={styles.circularLabel}>Temp</ThemedText>
           </View>
         </View>
-      </View>
-    </ThemedView>
+      </ModernCard>
+    </WeatherBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    borderRadius: 20,
     margin: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    minHeight: 400,
   },
   header: {
+    marginBottom: 24,
+  },
+  locationInfo: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+  },
+  locationText: {
+    marginLeft: 8,
+    flex: 1,
   },
   cityName: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    textAlign: 'center',
+    marginBottom: 2,
   },
   countryName: {
-    fontSize: 16,
+    fontSize: 14,
     opacity: 0.7,
-    marginTop: 4,
   },
-  temperatureContainer: {
+  temperatureSection: {
+    marginBottom: 24,
+  },
+  temperatureMain: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 30,
-  },
-  weatherIcon: {
-    marginRight: 20,
+    marginBottom: 20,
+    paddingTop: 10,
   },
   temperatureInfo: {
     alignItems: 'center',
+    marginLeft: 20,
   },
   temperature: {
     fontSize: 48,
@@ -152,31 +195,60 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
     opacity: 0.8,
+    fontWeight: '500',
   },
-  detailsContainer: {
-    gap: 16,
-  },
-  detailRow: {
+  quickStats: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 16,
   },
-  detailItem: {
-    flex: 1,
+  quickStatItem: {
     alignItems: 'center',
-    padding: 12,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 12,
-    marginHorizontal: 4,
   },
-  detailLabel: {
+  quickStatLabel: {
     fontSize: 12,
     opacity: 0.7,
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  quickStatValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  detailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    gap: 16,
+  },
+  circularCard: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  circularValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
     marginTop: 4,
     marginBottom: 2,
   },
-  detailValue: {
-    fontSize: 14,
-    fontWeight: '600',
+  circularLabel: {
+    fontSize: 10,
+    opacity: 0.8,
     textAlign: 'center',
   },
 });

@@ -88,15 +88,30 @@ export class WeatherService {
 
   static async getCurrentWeather(latitude: number, longitude: number): Promise<WeatherData> {
     try {
-      const response = await fetch(
-        `${this.BASE_URL}/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,surface_pressure,visibility,uv_index,weather_code&timezone=auto`
-      );
+      const url = `${this.BASE_URL}/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,surface_pressure,visibility,uv_index,weather_code&timezone=auto`;
+      
+      console.log('Fetching weather from URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
       
       if (!response.ok) {
-        throw new Error('Error al obtener datos del clima');
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        throw new Error(`Error al obtener datos del clima: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('Weather data received:', data);
+      
       const current = data.current;
       const weatherCode = current.weather_code;
 
@@ -114,7 +129,7 @@ export class WeatherService {
       };
     } catch (error) {
       console.error('Error fetching current weather:', error);
-      throw new Error('No se pudo obtener el clima actual');
+      throw new Error(`No se pudo obtener el clima actual: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   }
 

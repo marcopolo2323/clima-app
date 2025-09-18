@@ -1,11 +1,11 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { ModernCard } from '@/components/ui/ModernCard';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { ForecastData } from '@/services/weatherService';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ForecastData } from '@/services/weatherService';
+import React from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface ForecastItemProps {
   forecast: ForecastData;
@@ -17,16 +17,24 @@ export function ForecastItem({ forecast, isToday = false }: ForecastItemProps) {
   const colors = Colors[colorScheme ?? 'light'];
 
   const formatDate = (dateString: string) => {
+    // Crear fecha en zona horaria local
     const date = new Date(dateString);
     const today = new Date();
+    
+    // Obtener solo la parte de la fecha (sin hora)
+    const todayDate = today.toISOString().split('T')[0];
+    const forecastDate = date.toISOString().split('T')[0];
+    
+    // Calcular mañana
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDate = tomorrow.toISOString().split('T')[0];
 
-    if (isToday) {
+    if (isToday || forecastDate === todayDate) {
       return 'Hoy';
     }
 
-    if (date.toDateString() === tomorrow.toDateString()) {
+    if (forecastDate === tomorrowDate) {
       return 'Mañana';
     }
 
@@ -45,115 +53,173 @@ export function ForecastItem({ forecast, isToday = false }: ForecastItemProps) {
     return '#FF6347';
   };
 
+  const getPrecipitationColor = (precip: number) => {
+    if (precip === 0) return colors.success;
+    if (precip < 5) return colors.warning;
+    return colors.error;
+  };
+
   return (
-    <ThemedView style={[styles.container, isToday && styles.todayContainer]}>
-      <View style={styles.dateContainer}>
-        <ThemedText style={[styles.date, isToday && styles.todayDate]}>
-          {formatDate(forecast.date)}
-        </ThemedText>
-      </View>
-
-      <View style={styles.weatherContainer}>
-        <IconSymbol
-          name={forecast.icon}
-          size={32}
-          color={getTemperatureColor((forecast.maxTemp + forecast.minTemp) / 2)}
-          style={styles.weatherIcon}
-        />
-        <ThemedText style={styles.description}>
-          {forecast.description}
-        </ThemedText>
-      </View>
-
-      <View style={styles.temperatureContainer}>
-        <ThemedText style={[styles.maxTemp, { color: getTemperatureColor(forecast.maxTemp) }]}>
-          {forecast.maxTemp}°
-        </ThemedText>
-        <ThemedText style={[styles.minTemp, { color: getTemperatureColor(forecast.minTemp) }]}>
-          {forecast.minTemp}°
-        </ThemedText>
-      </View>
-
-      <View style={styles.detailsContainer}>
-        <View style={styles.detailItem}>
-          <IconSymbol name="cloud.rain.fill" size={14} color={colors.icon} />
-          <ThemedText style={styles.detailText}>
-            {forecast.precipitation}mm
-          </ThemedText>
+    <TouchableOpacity activeOpacity={0.7}>
+      <ModernCard 
+        variant={isToday ? 'elevated' : 'filled'}
+        style={[styles.container, isToday && styles.todayContainer]}
+        padding="medium"
+        borderRadius="large"
+      >
+        <View style={styles.header}>
+          <View style={styles.dateContainer}>
+            <ThemedText style={[styles.date, isToday && styles.todayDate]}>
+              {formatDate(forecast.date)}
+            </ThemedText>
+            <ThemedText style={styles.dateSubtext}>
+              {new Date(forecast.date).toLocaleDateString('es-ES', { 
+                day: 'numeric',
+                month: 'short'
+              })}
+            </ThemedText>
+          </View>
+          
+          {isToday && (
+            <View style={styles.todayBadge}>
+              <ThemedText style={styles.todayBadgeText}>HOY</ThemedText>
+            </View>
+          )}
         </View>
-        <View style={styles.detailItem}>
-          <IconSymbol name="wind" size={14} color={colors.icon} />
-          <ThemedText style={styles.detailText}>
-            {forecast.windSpeed} km/h
-          </ThemedText>
+
+        <View style={styles.weatherSection}>
+          <View style={styles.weatherInfo}>
+            <IconSymbol
+              name={forecast.icon}
+              size={40}
+              color={getTemperatureColor((forecast.maxTemp + forecast.minTemp) / 2)}
+              style={styles.weatherIcon}
+            />
+            <View style={styles.weatherText}>
+              <ThemedText style={styles.description}>
+                {forecast.description}
+              </ThemedText>
+              <View style={styles.weatherDetails}>
+                <View style={styles.detailItem}>
+                  <IconSymbol name="cloud.rain.fill" size={12} color={getPrecipitationColor(forecast.precipitation)} />
+                  <ThemedText style={[styles.detailText, { color: getPrecipitationColor(forecast.precipitation) }]}>
+                    {forecast.precipitation}mm
+                  </ThemedText>
+                </View>
+                <View style={styles.detailItem}>
+                  <IconSymbol name="wind" size={12} color={colors.icon} />
+                  <ThemedText style={styles.detailText}>
+                    {forecast.windSpeed} km/h
+                  </ThemedText>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.temperatureSection}>
+            <View style={styles.temperatureMain}>
+              <ThemedText style={[styles.maxTemp, { color: getTemperatureColor(forecast.maxTemp) }]}>
+                {forecast.maxTemp}°
+              </ThemedText>
+              <ThemedText style={styles.tempSeparator}>/</ThemedText>
+              <ThemedText style={[styles.minTemp, { color: getTemperatureColor(forecast.minTemp) }]}>
+                {forecast.minTemp}°
+              </ThemedText>
+            </View>
+            <ThemedText style={styles.tempLabel}>
+              {forecast.maxTemp}° / {forecast.minTemp}°
+            </ThemedText>
+          </View>
         </View>
-      </View>
-    </ThemedView>
+
+        {/* Barra de progreso de temperatura */}
+        <View style={styles.tempBarContainer}>
+          <View style={styles.tempBar}>
+            <View 
+              style={[
+                styles.tempBarFill,
+                { 
+                  width: `${Math.min(Math.max((forecast.maxTemp + 20) / 60 * 100, 0), 100)}%`,
+                  backgroundColor: getTemperatureColor(forecast.maxTemp)
+                }
+              ]} 
+            />
+          </View>
+        </View>
+      </ModernCard>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    borderRadius: 16,
     marginHorizontal: 16,
-    marginVertical: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    marginVertical: 6,
   },
   todayContainer: {
-    backgroundColor: 'rgba(0, 123, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 123, 255, 0.3)',
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   dateContainer: {
-    marginBottom: 12,
+    flex: 1,
   },
   date: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 2,
   },
   todayDate: {
-    color: '#007BFF',
-    fontWeight: 'bold',
+    color: '#007AFF',
   },
-  weatherContainer: {
+  dateSubtext: {
+    fontSize: 12,
+    opacity: 0.6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  todayBadge: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  todayBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  weatherSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  weatherInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    flex: 1,
   },
   weatherIcon: {
     marginRight: 12,
   },
-  description: {
-    fontSize: 14,
+  weatherText: {
     flex: 1,
-    opacity: 0.8,
   },
-  temperatureContainer: {
+  description: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  weatherDetails: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  maxTemp: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  minTemp: {
-    fontSize: 18,
-    fontWeight: '600',
-    opacity: 0.7,
-  },
-  detailsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    gap: 16,
   },
   detailItem: {
     flexDirection: 'row',
@@ -162,7 +228,45 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 12,
     marginLeft: 4,
+    fontWeight: '500',
+  },
+  temperatureSection: {
+    alignItems: 'flex-end',
+  },
+  temperatureMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  maxTemp: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  tempSeparator: {
+    fontSize: 18,
+    marginHorizontal: 4,
+    opacity: 0.5,
+  },
+  minTemp: {
+    fontSize: 20,
+    fontWeight: '600',
     opacity: 0.7,
+  },
+  tempLabel: {
+    fontSize: 12,
+    opacity: 0.6,
+  },
+  tempBarContainer: {
+    marginTop: 8,
+  },
+  tempBar: {
+    height: 3,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 2,
+  },
+  tempBarFill: {
+    height: '100%',
+    borderRadius: 2,
   },
 });
 

@@ -1,16 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl, View } from 'react-native';
+import { IconTest } from '@/components/debug/IconTest';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+import { GradientBackground } from '@/components/ui/GradientBackground';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { WeatherCard } from '@/components/weather/WeatherCard';
+import { ModernCard } from '@/components/ui/ModernCard';
+import { CitySearch } from '@/components/weather/CitySearch';
 import { ForecastItem } from '@/components/weather/ForecastItem';
 import { LoadingWeather } from '@/components/weather/LoadingWeather';
-import { CitySearch } from '@/components/weather/CitySearch';
-import { WeatherService, WeatherData, ForecastData, LocationData } from '@/services/weatherService';
-import { useLocation } from '@/hooks/useLocation';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { WeatherCard } from '@/components/weather/WeatherCard';
 import { Colors } from '@/constants/theme';
+import { useWeatherContext } from '@/contexts/WeatherContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useLocation } from '@/hooks/useLocation';
+import { ForecastData, LocationData, WeatherData, WeatherService } from '@/services/weatherService';
+import React, { useEffect, useState } from 'react';
+import { Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function HomeScreen() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -21,15 +26,10 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   
-  // Estado para manejar la ubicación seleccionada (puede ser diferente a la ubicación del GPS)
-  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
-  
   const { location: deviceLocation, loading: locationLoading, error: locationError, refreshLocation } = useLocation();
+  const { selectedLocation, setSelectedLocation, currentLocation, setDeviceLocation } = useWeatherContext();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-
-  // La ubicación actual es la seleccionada manualmente o la del dispositivo
-  const currentLocation = selectedLocation || deviceLocation;
 
   useEffect(() => {
     if (currentLocation) {
@@ -98,6 +98,13 @@ export default function HomeScreen() {
     // loadWeatherData se llamará automáticamente por el useEffect que observa currentLocation
   };
 
+  // Actualizar la ubicación del dispositivo en el contexto
+  useEffect(() => {
+    if (deviceLocation) {
+      setDeviceLocation(deviceLocation);
+    }
+  }, [deviceLocation, setDeviceLocation]);
+
   const handleUseCurrentLocation = () => {
     if (deviceLocation) {
       setSelectedLocation(null); // Limpiar ubicación manual
@@ -165,15 +172,18 @@ export default function HomeScreen() {
         <ThemedText style={styles.errorTitle}>Error</ThemedText>
         <ThemedText style={styles.errorMessage}>{error}</ThemedText>
         <View style={styles.errorButtons}>
-          <TouchableOpacity style={styles.retryButton} onPress={() => loadWeatherData(currentLocation!)}>
-            <ThemedText style={styles.retryButtonText}>Reintentar</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.retryButton, styles.searchButtonError]} 
+          <FloatingActionButton
+            onPress={() => loadWeatherData(currentLocation!)}
+            icon="arrow.clockwise"
+            label="Reintentar"
+            variant="primary"
+          />
+          <FloatingActionButton
             onPress={() => setShowCitySearch(true)}
-          >
-            <ThemedText style={styles.retryButtonText}>Buscar otra ciudad</ThemedText>
-          </TouchableOpacity>
+            icon="magnifyingglass"
+            label="Buscar ciudad"
+            variant="secondary"
+          />
         </View>
       </ThemedView>
     );
@@ -191,73 +201,109 @@ export default function HomeScreen() {
 
   // Pantalla principal con datos del clima
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-      }
-    >
-      {weather && currentLocation && (
-        <WeatherCard
-          weather={weather}
-          city={currentLocation.city || currentLocation.name || 'Ubicación desconocida'}
-          country={currentLocation.country}
-        />
-      )}
-
-      <ThemedView style={styles.forecastContainer}>
-        <View style={styles.forecastHeader}>
-          <ThemedText type="subtitle" style={styles.forecastTitle}>
-            Pronóstico 5 Días
-          </ThemedText>
-          
-          <View style={styles.headerButtons}>
-            {/* Botón para usar ubicación actual */}
-            {selectedLocation && deviceLocation && (
-              <TouchableOpacity
-                style={[styles.locationButton, { borderColor: colors.tint }]}
-                onPress={handleUseCurrentLocation}
-              >
-                <IconSymbol name="location.fill" size={16} color={colors.tint} />
-              </TouchableOpacity>
-            )}
-            
-            {/* Botón de búsqueda */}
-            <TouchableOpacity
-              style={styles.searchButton}
-              onPress={() => setShowCitySearch(true)}
-            >
-              <IconSymbol name="magnifyingglass" size={20} color={colors.tint} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Indicador de ubicación actual */}
-        {currentLocation && (
-          <View style={styles.locationIndicator}>
-            <IconSymbol 
-              name={selectedLocation ? "map.fill" : "location.fill"} 
-              size={14} 
-              color={colors.icon} 
-            />
-            <ThemedText style={styles.locationText}>
-              {selectedLocation 
-                ? `Ubicación personalizada: ${selectedLocation.name}${selectedLocation.country ? `, ${selectedLocation.country}` : ''}`
-                : 'Ubicación actual'
-              }
-            </ThemedText>
-          </View>
+    <GradientBackground variant="primary">
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {weather && currentLocation && (
+          <WeatherCard
+            weather={weather}
+            city={currentLocation.city || currentLocation.name || 'Ubicación desconocida'}
+            country={currentLocation.country}
+          />
         )}
 
-        {forecast.map((day, index) => (
-          <ForecastItem
-            key={day.date}
-            forecast={day}
-            isToday={index === 0}
-          />
-        ))}
-      </ThemedView>
-    </ScrollView>
+        <ModernCard 
+          variant="elevated" 
+          style={styles.forecastContainer}
+          padding="large"
+          borderRadius="xl"
+        >
+          <View style={styles.forecastHeader}>
+            <View style={styles.forecastTitleContainer}>
+              <IconSymbol name="calendar" size={24} color={colors.primary} />
+              <ThemedText type="subtitle" style={styles.forecastTitle}>
+                Pronóstico 5 Días
+              </ThemedText>
+            </View>
+            
+            <View style={styles.headerButtons}>
+              {/* Botón para usar ubicación actual */}
+              {selectedLocation && deviceLocation && (
+                <TouchableOpacity
+                  style={[styles.locationButton, { borderColor: colors.primary }]}
+                  onPress={handleUseCurrentLocation}
+                  activeOpacity={0.7}
+                >
+                  <IconSymbol name="location.fill" size={16} color={colors.primary} />
+                </TouchableOpacity>
+              )}
+              
+              {/* Botón de búsqueda */}
+              <TouchableOpacity
+                style={[styles.searchButton, { backgroundColor: colors.primary + '20' }]}
+                onPress={() => setShowCitySearch(true)}
+                activeOpacity={0.7}
+              >
+                <IconSymbol name="magnifyingglass" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Indicador de ubicación actual */}
+          {currentLocation && (
+            <ModernCard 
+              variant="filled" 
+              style={styles.locationIndicator}
+              padding="small"
+              borderRadius="medium"
+            >
+              <View style={styles.locationIndicatorContent}>
+                <IconSymbol 
+                  name={selectedLocation ? "map.fill" : "location.fill"} 
+                  size={16} 
+                  color={colors.primary} 
+                />
+                <ThemedText style={styles.locationText}>
+                  {selectedLocation 
+                    ? `Ubicación personalizada: ${selectedLocation.name}${selectedLocation.country ? `, ${selectedLocation.country}` : ''}`
+                    : 'Ubicación actual'
+                  }
+                </ThemedText>
+              </View>
+            </ModernCard>
+          )}
+
+          <View style={styles.forecastList}>
+        {forecast.map((day, index) => {
+          // Determinar si es hoy basándose en la fecha real
+          const today = new Date();
+          const todayDate = today.toISOString().split('T')[0];
+          const forecastDate = day.date;
+          const isToday = forecastDate === todayDate;
+          
+          return (
+            <ForecastItem
+              key={day.date}
+              forecast={day}
+              isToday={isToday}
+            />
+          );
+        })}
+          </View>
+        </ModernCard>
+
+        {/* Componente de prueba de iconos - temporal */}
+        <IconTest />
+
+        {/* Espaciado inferior */}
+        <View style={styles.bottomSpacing} />
+      </ScrollView>
+    </GradientBackground>
   );
 }
 
@@ -286,64 +332,69 @@ const styles = StyleSheet.create({
   errorButtons: {
     flexDirection: 'column',
     alignItems: 'center',
-    gap: 12,
-  },
-  retryButton: {
-    backgroundColor: '#007BFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    minWidth: 180,
-  },
-  searchButtonError: {
-    backgroundColor: '#6C757D',
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
+    gap: 16,
   },
   forecastContainer: {
+    margin: 16,
     marginTop: 8,
   },
   forecastHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  forecastTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   forecastTitle: {
     fontSize: 20,
     fontWeight: 'bold',
+    marginLeft: 8,
   },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
   locationButton: {
-    padding: 8,
-    borderWidth: 1,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 123, 255, 0.05)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   searchButton: {
-    padding: 8,
-    backgroundColor: 'rgba(0, 123, 255, 0.1)',
-    borderRadius: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.3)',
   },
   locationIndicator: {
+    marginBottom: 16,
+  },
+  locationIndicatorContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 6,
+    gap: 8,
   },
   locationText: {
-    fontSize: 12,
-    opacity: 0.7,
-    fontStyle: 'italic',
+    fontSize: 14,
+    opacity: 0.8,
+    fontWeight: '500',
+    flex: 1,
+  },
+  forecastList: {
+    gap: 8,
+  },
+  bottomSpacing: {
+    height: 20,
   },
 });

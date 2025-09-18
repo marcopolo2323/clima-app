@@ -1,16 +1,18 @@
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-  interpolate,
+    Easing,
+    interpolate,
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withRepeat,
+    withSequence,
+    withTiming,
 } from 'react-native-reanimated';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
 
 interface WeatherAnimationProps {
   weatherCode: number;
@@ -22,46 +24,132 @@ export function WeatherAnimation({ weatherCode, size = 100 }: WeatherAnimationPr
   const colors = Colors[colorScheme ?? 'light'];
 
   const rotation = useSharedValue(0);
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(0.8);
+  const scale = useSharedValue(0.8);
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(20);
+  const pulse = useSharedValue(1);
 
   useEffect(() => {
-    // Animación de rotación para viento
+    // Animación de entrada
+    scale.value = withTiming(1, { 
+      duration: 800, 
+      easing: Easing.out(Easing.back(1.2)) 
+    });
+    opacity.value = withTiming(1, { duration: 600 });
+    translateY.value = withTiming(0, { duration: 600 });
+
+    // Animaciones específicas por tipo de clima
     if (weatherCode >= 61 && weatherCode <= 65) { // Lluvia
       rotation.value = withRepeat(
-        withTiming(360, { duration: 2000 }),
+        withTiming(360, { 
+          duration: 3000,
+          easing: Easing.linear 
+        }),
         -1,
         false
       );
+      
+      // Efecto de gotas de lluvia
+      translateY.value = withRepeat(
+        withSequence(
+          withTiming(5, { duration: 800 }),
+          withTiming(0, { duration: 800 })
+        ),
+        -1,
+        true
+      );
     }
 
-    // Animación de escala para tormentas
-    if (weatherCode >= 95 && weatherCode <= 99) { // Tormenta
+    // Tormenta con efectos dramáticos
+    if (weatherCode >= 95 && weatherCode <= 99) {
       scale.value = withRepeat(
         withSequence(
-          withTiming(1.1, { duration: 500 }),
-          withTiming(1, { duration: 500 })
+          withTiming(1.15, { duration: 200 }),
+          withTiming(1, { duration: 200 }),
+          withDelay(1000, withTiming(1.1, { duration: 200 })),
+          withTiming(1, { duration: 200 })
         ),
         -1,
         true
       );
-    }
-
-    // Animación de opacidad para niebla
-    if (weatherCode === 45 || weatherCode === 48) { // Niebla
+      
+      // Efecto de parpadeo
       opacity.value = withRepeat(
         withSequence(
-          withTiming(0.4, { duration: 1000 }),
-          withTiming(0.8, { duration: 1000 })
+          withTiming(0.7, { duration: 100 }),
+          withTiming(1, { duration: 100 }),
+          withDelay(500, withTiming(0.8, { duration: 50 })),
+          withTiming(1, { duration: 50 })
         ),
         -1,
         true
       );
     }
 
-    // Animación suave de aparición
-    scale.value = withTiming(1, { duration: 500 });
-    opacity.value = withTiming(1, { duration: 500 });
+    // Niebla con efecto de desvanecimiento
+    if (weatherCode === 45 || weatherCode === 48) {
+      opacity.value = withRepeat(
+        withSequence(
+          withTiming(0.6, { duration: 2000 }),
+          withTiming(1, { duration: 2000 })
+        ),
+        -1,
+        true
+      );
+      
+      // Movimiento sutil
+      translateY.value = withRepeat(
+        withSequence(
+          withTiming(-3, { duration: 3000 }),
+          withTiming(3, { duration: 3000 })
+        ),
+        -1,
+        true
+      );
+    }
+
+    // Sol con efecto de pulso
+    if (weatherCode === 0 || weatherCode === 1) {
+      pulse.value = withRepeat(
+        withSequence(
+          withTiming(1.1, { duration: 2000 }),
+          withTiming(1, { duration: 2000 })
+        ),
+        -1,
+        true
+      );
+    }
+
+    // Nieve con movimiento flotante
+    if (weatherCode >= 71 && weatherCode <= 77) {
+      translateY.value = withRepeat(
+        withSequence(
+          withTiming(-5, { duration: 2000 }),
+          withTiming(5, { duration: 2000 })
+        ),
+        -1,
+        true
+      );
+      
+      rotation.value = withRepeat(
+        withTiming(10, { duration: 4000 }),
+        -1,
+        true
+      );
+    }
+
+    // Animación general de respiración
+    if (weatherCode !== 0 && weatherCode !== 1 && weatherCode < 61) {
+      scale.value = withRepeat(
+        withSequence(
+          withTiming(1.05, { duration: 3000 }),
+          withTiming(1, { duration: 3000 })
+        ),
+        -1,
+        true
+      );
+    }
+
   }, [weatherCode]);
 
   const getWeatherIcon = (code: number) => {
@@ -96,34 +184,45 @@ export function WeatherAnimation({ weatherCode, size = 100 }: WeatherAnimationPr
     return {
       transform: [
         { rotate: `${rotation.value}deg` },
-        { scale: scale.value },
+        { scale: scale.value * pulse.value },
+        { translateY: translateY.value },
       ],
       opacity: opacity.value,
     };
   });
 
-  const floatingStyle = useAnimatedStyle(() => {
-    const translateY = interpolate(
-      scale.value,
+  const glowStyle = useAnimatedStyle(() => {
+    const glowOpacity = interpolate(
+      pulse.value,
       [1, 1.1],
-      [0, -5]
+      [0.3, 0.6]
     );
     
     return {
-      transform: [{ translateY }],
+      opacity: glowOpacity,
+      transform: [{ scale: pulse.value * 1.2 }],
     };
   });
 
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.iconContainer, floatingStyle]}>
-        <Animated.View style={animatedStyle}>
+      {/* Efecto de resplandor para el sol */}
+      {(weatherCode === 0 || weatherCode === 1) && (
+        <Animated.View style={[styles.glowEffect, glowStyle]}>
           <IconSymbol
-            name={getWeatherIcon(weatherCode)}
-            size={size}
+            name="sun.max.fill"
+            size={size * 1.5}
             color={getWeatherColor(weatherCode)}
           />
         </Animated.View>
+      )}
+      
+      <Animated.View style={[styles.iconContainer, animatedStyle]}>
+        <IconSymbol
+          name={getWeatherIcon(weatherCode)}
+          size={size}
+          color={getWeatherColor(weatherCode)}
+        />
       </Animated.View>
     </View>
   );
@@ -133,10 +232,18 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 2,
+  },
+  glowEffect: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
   },
 });
 
