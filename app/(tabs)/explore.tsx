@@ -6,6 +6,7 @@ import { Colors } from '@/constants/theme';
 import { useWeatherContext } from '@/contexts/WeatherContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ForecastData, WeatherData, WeatherService } from '@/services/weatherService';
+import { debugDateInfo, isToday, isTomorrow } from '@/utils/dateUtils';
 import React, { useEffect, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -192,16 +193,12 @@ export default function ExploreScreen() {
           </View>
           <View style={styles.forecastContainer}>
             {forecast.map((day, index) => {
-              // Determinar si es hoy basándose en la fecha real
-              const today = new Date();
-              const todayDate = today.toISOString().split('T')[0];
-              const forecastDate = day.date;
-              const isToday = forecastDate === todayDate;
+              // Debug: mostrar información de fechas
+              debugDateInfo(day.date, `Detalles ${index}`);
               
-              const tomorrow = new Date(today);
-              tomorrow.setDate(tomorrow.getDate() + 1);
-              const tomorrowDate = tomorrow.toISOString().split('T')[0];
-              const isTomorrow = forecastDate === tomorrowDate;
+              // Determinar si es hoy y mañana usando las funciones utilitarias
+              const isTodayFlag = isToday(day.date);
+              const isTomorrowFlag = isTomorrow(day.date);
               
               const date = new Date(day.date);
               
@@ -216,8 +213,8 @@ export default function ExploreScreen() {
                   <View style={styles.forecastRow}>
                     <View style={styles.forecastDate}>
                       <ThemedText style={styles.forecastDay}>
-                        {isToday ? 'Hoy' : 
-                         isTomorrow ? 'Mañana' : 
+                        {isTodayFlag ? 'Hoy' : 
+                         isTomorrowFlag ? 'Mañana' : 
                          date.toLocaleDateString('es-ES', { weekday: 'short' })}
                       </ThemedText>
                       <ThemedText style={styles.forecastDateText}>

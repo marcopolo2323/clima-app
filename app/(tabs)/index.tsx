@@ -1,6 +1,4 @@
-import { IconTest } from '@/components/debug/IconTest';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -14,6 +12,7 @@ import { useWeatherContext } from '@/contexts/WeatherContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useLocation } from '@/hooks/useLocation';
 import { ForecastData, LocationData, WeatherData, WeatherService } from '@/services/weatherService';
+import { debugDateInfo, isToday } from '@/utils/dateUtils';
 import React, { useEffect, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -135,16 +134,37 @@ export default function HomeScreen() {
   // Manejo de errores de ubicación
   if (locationError && !selectedLocation) {
     return (
-      <ThemedView style={styles.errorContainer}>
-        <IconSymbol name="location.slash" size={60} color="#FF6B6B" />
-        <ThemedText style={styles.errorTitle}>Error de Ubicación</ThemedText>
-        <ThemedText style={styles.errorMessage}>
-          {locationError}
-        </ThemedText>
-        <TouchableOpacity style={styles.retryButton} onPress={handleLocationError}>
-          <ThemedText style={styles.retryButtonText}>Buscar Ciudad</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
+      <GradientBackground variant="primary">
+        <View style={styles.errorContainer}>
+          <IconSymbol name="location.slash" size={60} color="#FF6B6B" />
+          <ThemedText style={styles.errorTitle}>Error de Ubicación</ThemedText>
+          <ThemedText style={styles.errorMessage}>
+            No se pudo obtener tu ubicación actual. Esto puede deberse a:
+          </ThemedText>
+          <ThemedText style={styles.errorSubMessage}>
+            • Permisos de ubicación denegados{'\n'}
+            • Servicios de ubicación deshabilitados{'\n'}
+            • Problemas de conectividad
+          </ThemedText>
+          <ThemedText style={styles.errorSubMessage}>
+            Usando Pucallpa, Perú como ubicación por defecto.
+          </ThemedText>
+          <View style={styles.errorButtons}>
+            <FloatingActionButton
+              onPress={handleLocationError}
+              icon="magnifyingglass"
+              label="Buscar Ciudad"
+              variant="primary"
+            />
+            <FloatingActionButton
+              onPress={refreshLocation}
+              icon="arrow.clockwise"
+              label="Reintentar"
+              variant="secondary"
+            />
+          </View>
+        </View>
+      </GradientBackground>
     );
   }
 
@@ -167,25 +187,34 @@ export default function HomeScreen() {
   // Manejo de errores de datos del clima
   if (error) {
     return (
-      <ThemedView style={styles.errorContainer}>
-        <IconSymbol name="exclamationmark.triangle" size={60} color="#FF6B6B" />
-        <ThemedText style={styles.errorTitle}>Error</ThemedText>
-        <ThemedText style={styles.errorMessage}>{error}</ThemedText>
-        <View style={styles.errorButtons}>
-          <FloatingActionButton
-            onPress={() => loadWeatherData(currentLocation!)}
-            icon="arrow.clockwise"
-            label="Reintentar"
-            variant="primary"
-          />
-          <FloatingActionButton
-            onPress={() => setShowCitySearch(true)}
-            icon="magnifyingglass"
-            label="Buscar ciudad"
-            variant="secondary"
-          />
+      <GradientBackground variant="primary">
+        <View style={styles.errorContainer}>
+          <IconSymbol name="exclamationmark.triangle" size={60} color="#FF6B6B" />
+          <ThemedText style={styles.errorTitle}>Error de Datos</ThemedText>
+          <ThemedText style={styles.errorMessage}>
+            No se pudieron obtener los datos del clima. Esto puede deberse a:
+          </ThemedText>
+          <ThemedText style={styles.errorSubMessage}>
+            • Problemas de conectividad a internet{'\n'}
+            • Servicio de clima temporalmente no disponible{'\n'}
+            • Error en la API del clima
+          </ThemedText>
+          <View style={styles.errorButtons}>
+            <FloatingActionButton
+              onPress={() => loadWeatherData(currentLocation!)}
+              icon="arrow.clockwise"
+              label="Reintentar"
+              variant="primary"
+            />
+            <FloatingActionButton
+              onPress={() => setShowCitySearch(true)}
+              icon="magnifyingglass"
+              label="Buscar Ciudad"
+              variant="secondary"
+            />
+          </View>
         </View>
-      </ThemedView>
+      </GradientBackground>
     );
   }
 
@@ -280,25 +309,23 @@ export default function HomeScreen() {
 
           <View style={styles.forecastList}>
         {forecast.map((day, index) => {
-          // Determinar si es hoy basándose en la fecha real
-          const today = new Date();
-          const todayDate = today.toISOString().split('T')[0];
-          const forecastDate = day.date;
-          const isToday = forecastDate === todayDate;
+          // Debug: mostrar información de fechas
+          debugDateInfo(day.date, `Pronóstico ${index}`);
+          
+          // Determinar si es hoy usando la función utilitaria
+          const isTodayFlag = isToday(day.date);
           
           return (
             <ForecastItem
               key={day.date}
               forecast={day}
-              isToday={isToday}
+              isToday={isTodayFlag}
             />
           );
         })}
           </View>
         </ModernCard>
 
-        {/* Componente de prueba de iconos - temporal */}
-        <IconTest />
 
         {/* Espaciado inferior */}
         <View style={styles.bottomSpacing} />
@@ -326,8 +353,23 @@ const styles = StyleSheet.create({
   errorMessage: {
     fontSize: 16,
     textAlign: 'center',
-    opacity: 0.7,
-    marginBottom: 24,
+    opacity: 0.9,
+    marginBottom: 16,
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  errorSubMessage: {
+    fontSize: 14,
+    textAlign: 'left',
+    opacity: 0.8,
+    marginBottom: 16,
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+    lineHeight: 20,
   },
   errorButtons: {
     flexDirection: 'column',

@@ -148,8 +148,11 @@ export class WeatherService {
 
       return daily.time.map((date: string, index: number) => {
         const weatherCode = daily.weather_code[index];
+        
+        // Usar la fecha directamente de la API sin normalización
+        // La API ya devuelve fechas en formato YYYY-MM-DD
         return {
-          date,
+          date: date,
           maxTemp: Math.round(daily.temperature_2m_max[index]),
           minTemp: Math.round(daily.temperature_2m_min[index]),
           weatherCode,

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
+import { useEffect, useState } from 'react';
 
 export interface LocationData {
   latitude: number;
@@ -22,16 +22,44 @@ export function useLocation() {
       setLoading(true);
       setError(null);
 
+      // Verificar si los servicios de ubicación están disponibles
+      const isLocationEnabled = await Location.hasServicesEnabledAsync();
+      if (!isLocationEnabled) {
+        console.warn('Servicios de ubicación deshabilitados, usando ubicación por defecto');
+        // Usar Pucallpa, Perú como ubicación por defecto
+        setLocation({
+          latitude: -8.3833,
+          longitude: -74.5333,
+          city: 'Pucallpa',
+          country: 'Perú',
+        });
+        return;
+      }
+
       // Solicitar permisos de ubicación
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        throw new Error('Permisos de ubicación denegados');
+        console.warn('Permisos de ubicación denegados, usando ubicación por defecto');
+        // Usar Pucallpa, Perú como ubicación por defecto
+        setLocation({
+          latitude: -8.3833,
+          longitude: -74.5333,
+          city: 'Pucallpa',
+          country: 'Perú',
+        });
+        return;
       }
 
-      // Obtener ubicación actual
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      // Obtener ubicación actual con timeout
+      const location = await Promise.race([
+        Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 10000, // 10 segundos
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout de ubicación')), 15000)
+        )
+      ]) as Location.LocationObject;
 
       // Obtener información de la ciudad
       const reverseGeocode = await Location.reverseGeocodeAsync({
@@ -48,7 +76,17 @@ export function useLocation() {
       });
     } catch (err) {
       console.error('Error getting location:', err);
-      setError(err instanceof Error ? err.message : 'Error al obtener ubicación');
+      const errorMessage = err instanceof Error ? err.message : 'Error al obtener ubicación';
+      setError(errorMessage);
+      
+      // En caso de error, usar ubicación por defecto
+      console.warn('Usando ubicación por defecto debido a error:', errorMessage);
+      setLocation({
+        latitude: -8.3833,
+        longitude: -74.5333,
+        city: 'Pucallpa',
+        country: 'Perú',
+      });
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ForecastData } from '@/services/weatherService';
+import { debugDateInfo, formatForecastDate } from '@/utils/dateUtils';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -17,32 +18,11 @@ export function ForecastItem({ forecast, isToday = false }: ForecastItemProps) {
   const colors = Colors[colorScheme ?? 'light'];
 
   const formatDate = (dateString: string) => {
-    // Crear fecha en zona horaria local
-    const date = new Date(dateString);
-    const today = new Date();
+    // Debug: mostrar información de fechas
+    debugDateInfo(dateString, 'Pronóstico');
     
-    // Obtener solo la parte de la fecha (sin hora)
-    const todayDate = today.toISOString().split('T')[0];
-    const forecastDate = date.toISOString().split('T')[0];
-    
-    // Calcular mañana
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowDate = tomorrow.toISOString().split('T')[0];
-
-    if (isToday || forecastDate === todayDate) {
-      return 'Hoy';
-    }
-
-    if (forecastDate === tomorrowDate) {
-      return 'Mañana';
-    }
-
-    return date.toLocaleDateString('es-ES', { 
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short'
-    });
+    // Usar la función utilitaria para formatear la fecha
+    return formatForecastDate(dateString, isToday);
   };
 
   const getTemperatureColor = (temp: number) => {
@@ -173,15 +153,26 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 2,
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   todayDate: {
-    color: '#007AFF',
+    color: '#87CEEB',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   dateSubtext: {
     fontSize: 12,
-    opacity: 0.6,
+    opacity: 0.9,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   todayBadge: {
     backgroundColor: '#007AFF',
@@ -216,6 +207,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     marginBottom: 8,
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   weatherDetails: {
     flexDirection: 'row',
@@ -229,6 +224,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginLeft: 4,
     fontWeight: '500',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   temperatureSection: {
     alignItems: 'flex-end',
@@ -241,20 +240,34 @@ const styles = StyleSheet.create({
   maxTemp: {
     fontSize: 24,
     fontWeight: 'bold',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   tempSeparator: {
     fontSize: 18,
     marginHorizontal: 4,
-    opacity: 0.5,
+    opacity: 0.8,
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   minTemp: {
     fontSize: 20,
     fontWeight: '600',
-    opacity: 0.7,
+    opacity: 0.9,
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   tempLabel: {
     fontSize: 12,
-    opacity: 0.6,
+    opacity: 0.9,
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   tempBarContainer: {
     marginTop: 8,

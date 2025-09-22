@@ -25,10 +25,14 @@ export function WeatherEffects({ weatherCode }: WeatherEffectsProps) {
   const snowOpacity = useSharedValue(0);
   const sunRays = useSharedValue(0);
   const cloudMove = useSharedValue(0);
+  const lightningFlash = useSharedValue(0);
 
   useEffect(() => {
+    console.log('🌤️ WeatherEffects - Código del clima:', weatherCode);
+    
     // Efectos de lluvia
     if (weatherCode >= 61 && weatherCode <= 65) {
+      console.log('🌧️ Activando efectos de lluvia');
       rainOpacity.value = withRepeat(
         withSequence(
           withTiming(0.8, { duration: 1000 }),
@@ -43,6 +47,7 @@ export function WeatherEffects({ weatherCode }: WeatherEffectsProps) {
 
     // Efectos de nieve
     if (weatherCode >= 71 && weatherCode <= 77) {
+      console.log('❄️ Activando efectos de nieve');
       snowOpacity.value = withRepeat(
         withSequence(
           withTiming(0.9, { duration: 2000 }),
@@ -57,6 +62,7 @@ export function WeatherEffects({ weatherCode }: WeatherEffectsProps) {
 
     // Efectos de sol
     if (weatherCode === 0 || weatherCode === 1) {
+      console.log('☀️ Activando efectos de sol');
       sunRays.value = withRepeat(
         withTiming(1, { duration: 3000, easing: Easing.linear }),
         -1,
@@ -68,6 +74,7 @@ export function WeatherEffects({ weatherCode }: WeatherEffectsProps) {
 
     // Efectos de nubes
     if (weatherCode >= 2 && weatherCode <= 3) {
+      console.log('☁️ Activando efectos de nubes');
       cloudMove.value = withRepeat(
         withTiming(1, { duration: 8000, easing: Easing.linear }),
         -1,
@@ -75,6 +82,33 @@ export function WeatherEffects({ weatherCode }: WeatherEffectsProps) {
       );
     } else {
       cloudMove.value = withTiming(0, { duration: 500 });
+    }
+
+    // Efectos para clima parcialmente nublado (código 2)
+    if (weatherCode === 2) {
+      console.log('⛅ Activando efectos de parcialmente nublado');
+      sunRays.value = withRepeat(
+        withTiming(0.5, { duration: 4000, easing: Easing.linear }),
+        -1,
+        false
+      );
+    }
+
+    // Efectos de tormenta
+    if (weatherCode >= 95 && weatherCode <= 99) {
+      console.log('⚡ Activando efectos de tormenta');
+      lightningFlash.value = withRepeat(
+        withSequence(
+          withTiming(1, { duration: 100 }),
+          withTiming(0, { duration: 200 }),
+          withTiming(1, { duration: 50 }),
+          withTiming(0, { duration: 1000 })
+        ),
+        -1,
+        false
+      );
+    } else {
+      lightningFlash.value = withTiming(0, { duration: 500 });
     }
   }, [weatherCode]);
 
@@ -93,6 +127,10 @@ export function WeatherEffects({ weatherCode }: WeatherEffectsProps) {
 
   const cloudStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: interpolate(cloudMove.value, [0, 1], [0, 50]) }],
+  }));
+
+  const lightningStyle = useAnimatedStyle(() => ({
+    opacity: lightningFlash.value,
   }));
 
   return (
@@ -144,6 +182,13 @@ export function WeatherEffects({ weatherCode }: WeatherEffectsProps) {
       {weatherCode >= 2 && weatherCode <= 3 && (
         <Animated.View style={[styles.cloudContainer, cloudStyle]}>
           <IconSymbol name="cloud.fill" size={80} color="rgba(169, 169, 169, 0.4)" />
+        </Animated.View>
+      )}
+
+      {/* Efectos de tormenta */}
+      {weatherCode >= 95 && weatherCode <= 99 && (
+        <Animated.View style={[styles.lightningContainer, lightningStyle]}>
+          <IconSymbol name="cloud.bolt.fill" size={120} color="rgba(255, 255, 255, 0.8)" />
         </Animated.View>
       )}
     </View>
@@ -206,5 +251,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 100,
     left: -50,
+  },
+  lightningContainer: {
+    position: 'absolute',
+    top: 80,
+    right: 30,
   },
 });

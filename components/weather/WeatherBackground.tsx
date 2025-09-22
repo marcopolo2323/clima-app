@@ -2,7 +2,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { ImageBackground, StyleSheet } from 'react-native';
 
 interface WeatherBackgroundProps {
   weatherCode: number;
@@ -13,11 +13,31 @@ export function WeatherBackground({ weatherCode, children }: WeatherBackgroundPr
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  // Por ahora usamos solo gradientes, las imágenes se pueden agregar después
-  // const getWeatherImage = (code: number) => {
-  //   // Imágenes de fondo basadas en el código del clima
-  //   return null; // Temporalmente deshabilitado
-  // };
+  // Mapeo estático de imágenes de fondo
+  const backgroundImages = {
+    mañana: require('@/assets/images/mañana_fondo_app.jpg'),
+    tarde: require('@/assets/images/tarde_fondo_app.jpg'),
+    noche: require('@/assets/images/noche_fondo_app.jpg'),
+    default: require('@/assets/images/fondo_app.jpg'),
+  };
+
+  // Obtener imagen de fondo basada en la hora del día
+  const getBackgroundImage = (code: number) => {
+    const hour = new Date().getHours();
+    
+    // Determinar período del día
+    let timeOfDay = 'tarde'; // Por defecto
+    if (hour >= 6 && hour < 12) {
+      timeOfDay = 'mañana';
+    } else if (hour >= 12 && hour < 18) {
+      timeOfDay = 'tarde';
+    } else {
+      timeOfDay = 'noche';
+    }
+    
+    // Retornar la imagen correspondiente
+    return backgroundImages[timeOfDay as keyof typeof backgroundImages] || backgroundImages.default;
+  };
 
   const getWeatherGradient = (code: number) => {
     const isDark = colorScheme === 'dark';
@@ -66,21 +86,29 @@ export function WeatherBackground({ weatherCode, children }: WeatherBackgroundPr
     }
   };
 
-  // Por ahora usaremos gradientes hasta que tengamos las imágenes
   return (
-    <LinearGradient
-      colors={getWeatherGradient(weatherCode)}
+    <ImageBackground
+      source={getBackgroundImage(weatherCode)}
       style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      resizeMode="cover"
     >
-      {children}
-    </LinearGradient>
+      <LinearGradient
+        colors={getWeatherGradient(weatherCode)}
+        style={styles.overlay}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        {children}
+      </LinearGradient>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  overlay: {
     flex: 1,
   },
 });
