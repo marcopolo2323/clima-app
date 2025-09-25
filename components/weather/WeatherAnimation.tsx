@@ -167,16 +167,16 @@ export function WeatherAnimation({ weatherCode, size = 100 }: WeatherAnimationPr
   };
 
   const getWeatherColor = (code: number) => {
-    if (code === 0 || code === 1) return '#FFD700'; // Sol - Amarillo
-    if (code === 2) return '#87CEEB'; // Parcialmente nublado - Azul claro
-    if (code === 3) return '#708090'; // Nublado - Gris
-    if (code >= 45 && code <= 48) return '#D3D3D3'; // Niebla - Gris claro
-    if (code >= 51 && code <= 55) return '#4682B4'; // Llovizna - Azul acero
-    if (code >= 61 && code <= 65) return '#4169E1'; // Lluvia - Azul real
-    if (code >= 71 && code <= 77) return '#F0F8FF'; // Nieve - Azul blanco
-    if (code >= 80 && code <= 82) return '#1E90FF'; // Chubascos - Azul dodger
-    if (code >= 85 && code <= 86) return '#E0E0E0'; // Chubascos de nieve - Gris claro
-    if (code >= 95 && code <= 99) return '#8A2BE2'; // Tormenta - Azul violeta
+    if (code === 0 || code === 1) return colors.weather.clear; // Sol - Amarillo
+    if (code === 2) return colors.weather.cloudy; // Parcialmente nublado - Azul claro
+    if (code === 3) return colors.weather.cloudy; // Nublado - Gris
+    if (code >= 45 && code <= 48) return colors.weather.fog; // Niebla - Gris claro
+    if (code >= 51 && code <= 55) return colors.weather.rain; // Llovizna - Azul acero
+    if (code >= 61 && code <= 65) return colors.weather.rain; // Lluvia - Azul real
+    if (code >= 71 && code <= 77) return colors.weather.snow; // Nieve - Azul blanco
+    if (code >= 80 && code <= 82) return colors.weather.rain; // Chubascos - Azul dodger
+    if (code >= 85 && code <= 86) return colors.weather.snow; // Chubascos de nieve - Gris claro
+    if (code >= 95 && code <= 99) return colors.weather.storm; // Tormenta - Azul violeta
     return colors.icon;
   };
 

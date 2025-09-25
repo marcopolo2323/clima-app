@@ -6,7 +6,7 @@ import { Colors } from '@/constants/theme';
 import { useWeatherContext } from '@/contexts/WeatherContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ForecastData, WeatherData, WeatherService } from '@/services/weatherService';
-import { debugDateInfo, isToday, isTomorrow } from '@/utils/dateUtils';
+import { isToday, isTomorrow } from '@/utils/dateUtils';
 import React, { useEffect, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -139,15 +139,15 @@ export default function ExploreScreen() {
             <View style={styles.headerText}>
               <ThemedText type="title" style={styles.title}>
                 Información Detallada
-              </ThemedText>
+        </ThemedText>
               <ThemedText style={styles.subtitle}>
                 Datos meteorológicos y consejos personalizados
-              </ThemedText>
+        </ThemedText>
             </View>
           </View>
         </ModernCard>
 
-        {/* Consejos del clima */}
+        {/* Comfort level */}
         <ModernCard 
           variant="elevated" 
           style={styles.section}
@@ -155,26 +155,75 @@ export default function ExploreScreen() {
           borderRadius="xl"
         >
           <View style={styles.sectionHeader}>
-            <IconSymbol name="lightbulb.fill" size={28} color={colors.warning} />
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              Consejos del Clima
-            </ThemedText>
+            <IconSymbol name="gauge.with.dots.needle.bottom.50percent" size={28} color={colors.primary} />
+            <ThemedText type="subtitle" style={styles.sectionTitle}>Nivel de Confort</ThemedText>
           </View>
-          <View style={styles.tipsContainer}>
-            {tips.map((tip, index) => (
-              <ModernCard 
-                key={index} 
-                variant="filled" 
-                style={styles.tipCard}
-                padding="medium"
-                borderRadius="medium"
-              >
-                <View style={styles.tipItem}>
-                  <IconSymbol name="checkmark.circle.fill" size={20} color={colors.success} />
-                  <ThemedText style={styles.tipText}>{tip}</ThemedText>
-                </View>
-              </ModernCard>
-            ))}
+          <View style={styles.comfortRow}>
+            <View style={styles.comfortItem}>
+              <IconSymbol name="humidity.fill" size={24} color={colors.tint} />
+              <ThemedText style={styles.comfortValue}>{weather.humidity}%</ThemedText>
+              <ThemedText style={styles.comfortLabel}>Humidity</ThemedText>
+            </View>
+            <View style={styles.comfortItem}>
+              <IconSymbol name="thermometer" size={24} color={colors.warning} />
+              <ThemedText style={styles.comfortValue}>{weather.feelsLike ?? weather.temperature}°</ThemedText>
+              <ThemedText style={styles.comfortLabel}>Feels like</ThemedText>
+            </View>
+            <View style={styles.comfortItem}>
+              <IconSymbol name="sun.max.fill" size={24} color={colors.warning} />
+              <ThemedText style={styles.comfortValue}>{weather.uvIndex}</ThemedText>
+              <ThemedText style={styles.comfortLabel}>UV index</ThemedText>
+            </View>
+          </View>
+        </ModernCard>
+
+        {/* Wind */}
+        <ModernCard 
+          variant="elevated" 
+          style={styles.section}
+          padding="large"
+          borderRadius="xl"
+        >
+          <View style={styles.sectionHeader}>
+            <IconSymbol name="wind" size={28} color={colors.secondary} />
+            <ThemedText type="subtitle" style={styles.sectionTitle}>Viento</ThemedText>
+          </View>
+          <View style={styles.windRow}>
+            <View style={styles.windItem}>
+              <ThemedText style={styles.windLabel}>Dirección</ThemedText>
+              <ThemedText style={styles.windValue}>{WeatherService.getWindDirection(weather.windDirection)}</ThemedText>
+            </View>
+            <View style={styles.windItem}>
+              <ThemedText style={styles.windLabel}>Velocidad</ThemedText>
+              <ThemedText style={styles.windValue}>{Math.round(weather.windSpeed)} km/h</ThemedText>
+            </View>
+          </View>
+        </ModernCard>
+
+        {/* Sunrise and Sunset */}
+        <ModernCard 
+          variant="elevated" 
+          style={styles.section}
+          padding="large"
+          borderRadius="xl"
+        >
+          <View style={styles.sectionHeader}>
+            <IconSymbol name="sunrise.fill" size={28} color={colors.tint} />
+            <ThemedText type="subtitle" style={styles.sectionTitle}>Amanecer y Atardecer</ThemedText>
+          </View>
+          <View style={styles.sunRow}>
+            <View style={styles.sunItem}>
+              <ThemedText style={styles.sunLabel}>Amanecer</ThemedText>
+              <ThemedText style={styles.sunValue}>
+                {weather.sunrise ? new Date(weather.sunrise).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '—'}
+              </ThemedText>
+            </View>
+            <View style={styles.sunItem}>
+              <ThemedText style={styles.sunLabel}>Atardecer</ThemedText>
+              <ThemedText style={styles.sunValue}>
+                {weather.sunset ? new Date(weather.sunset).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '—'}
+              </ThemedText>
+            </View>
           </View>
         </ModernCard>
 
@@ -189,38 +238,36 @@ export default function ExploreScreen() {
             <IconSymbol name="calendar" size={28} color={colors.secondary} />
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Pronóstico 7 Días
-            </ThemedText>
+        </ThemedText>
           </View>
           <View style={styles.forecastContainer}>
-            {forecast.map((day, index) => {
-              // Debug: mostrar información de fechas
-              debugDateInfo(day.date, `Detalles ${index}`);
-              
-              // Determinar si es hoy y mañana usando las funciones utilitarias
-              const isTodayFlag = isToday(day.date);
-              const isTomorrowFlag = isTomorrow(day.date);
-              
-              const date = new Date(day.date);
-              
-              return (
-                <ModernCard 
-                  key={day.date} 
-                  variant="filled" 
-                  style={styles.forecastCard}
-                  padding="medium"
-                  borderRadius="large"
-                >
-                  <View style={styles.forecastRow}>
-                    <View style={styles.forecastDate}>
-                      <ThemedText style={styles.forecastDay}>
-                        {isTodayFlag ? 'Hoy' : 
-                         isTomorrowFlag ? 'Mañana' : 
-                         date.toLocaleDateString('es-ES', { weekday: 'short' })}
-                      </ThemedText>
-                      <ThemedText style={styles.forecastDateText}>
-                        {date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                      </ThemedText>
-                    </View>
+            {forecast
+              .map((day, index) => {
+                // Determinar si es hoy, mañana o otro día
+                const isTodayFlag = isToday(day.date);
+                const isTomorrowFlag = isTomorrow(day.date);
+                
+                const date = new Date(day.date);
+                
+                return (
+                  <ModernCard 
+                    key={day.date} 
+                    variant="filled" 
+                    style={styles.forecastCard}
+                    padding="medium"
+                    borderRadius="large"
+                  >
+                    <View style={styles.forecastRow}>
+                      <View style={styles.forecastDate}>
+                        <ThemedText style={styles.forecastDay}>
+                          {isTodayFlag ? 'Hoy' : 
+                           isTomorrowFlag ? 'Mañana' : 
+                           date.toLocaleDateString('es-ES', { weekday: 'short' })}
+        </ThemedText>
+                        <ThemedText style={styles.forecastDateText}>
+                          {date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+        </ThemedText>
+                      </View>
                     <View style={styles.forecastWeather}>
                       <IconSymbol name={day.icon} size={28} color={colors.icon} />
                       <ThemedText style={styles.forecastDescription}>{day.description}</ThemedText>
@@ -232,69 +279,11 @@ export default function ExploreScreen() {
                   </View>
                 </ModernCard>
               );
-            })}
+              })}
           </View>
         </ModernCard>
 
-        {/* Información técnica */}
-        <ModernCard 
-          variant="elevated" 
-          style={styles.section}
-          padding="large"
-          borderRadius="xl"
-        >
-          <View style={styles.sectionHeader}>
-            <IconSymbol name="info.circle.fill" size={28} color={colors.primary} />
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              Información Técnica
-            </ThemedText>
-          </View>
-          <View style={styles.techGrid}>
-            <ModernCard variant="filled" style={styles.techCard} padding="medium" borderRadius="medium">
-              <View style={styles.techItem}>
-                <IconSymbol name="wind" size={24} color={colors.secondary} />
-                <View style={styles.techContent}>
-                  <ThemedText style={styles.techLabel}>Dirección del viento</ThemedText>
-                  <ThemedText style={styles.techValue}>
-                    {WeatherService.getWindDirection(weather.windDirection)} ({weather.windDirection}°)
-                  </ThemedText>
-                </View>
-              </View>
-            </ModernCard>
-
-            <ModernCard variant="filled" style={styles.techCard} padding="medium" borderRadius="medium">
-              <View style={styles.techItem}>
-                <IconSymbol name="sun.max.fill" size={24} color={colors.warning} />
-                <View style={styles.techContent}>
-                  <ThemedText style={styles.techLabel}>Índice UV</ThemedText>
-                  <ThemedText style={styles.techValue}>
-                    {weather.uvIndex} - {WeatherService.getUVIndexDescription(weather.uvIndex)}
-                  </ThemedText>
-                </View>
-              </View>
-            </ModernCard>
-
-            <ModernCard variant="filled" style={styles.techCard} padding="medium" borderRadius="medium">
-              <View style={styles.techItem}>
-                <IconSymbol name="barometer" size={24} color={colors.error} />
-                <View style={styles.techContent}>
-                  <ThemedText style={styles.techLabel}>Presión atmosférica</ThemedText>
-                  <ThemedText style={styles.techValue}>{weather.pressure} hPa</ThemedText>
-                </View>
-              </View>
-            </ModernCard>
-
-            <ModernCard variant="filled" style={styles.techCard} padding="medium" borderRadius="medium">
-              <View style={styles.techItem}>
-                <IconSymbol name="eye.fill" size={24} color={colors.success} />
-                <View style={styles.techContent}>
-                  <ThemedText style={styles.techLabel}>Visibilidad</ThemedText>
-                  <ThemedText style={styles.techValue}>{weather.visibility / 1000} km</ThemedText>
-                </View>
-              </View>
-            </ModernCard>
-          </View>
-        </ModernCard>
+        {/* Información técnica (opcional, escondida para mantener limpio) */}
 
         {/* Fuente de datos */}
         <ModernCard 
@@ -307,12 +296,12 @@ export default function ExploreScreen() {
             <IconSymbol name="link" size={28} color={colors.primary} />
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Fuente de Datos
-            </ThemedText>
+        </ThemedText>
           </View>
           <View style={styles.sourceContainer}>
             <ThemedText style={styles.sourceText}>
               Los datos meteorológicos son proporcionados por Open-Meteo, una API gratuita y de código abierto.
-            </ThemedText>
+        </ThemedText>
             <ThemedText style={styles.sourceText}>
               Los datos se actualizan cada hora y cubren todo el mundo con alta precisión.
             </ThemedText>
@@ -390,6 +379,61 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginLeft: 12,
+  },
+  comfortRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  comfortItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  comfortValue: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  comfortLabel: {
+    color: '#FFFFFF',
+    opacity: 0.9,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  windRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  windItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  windLabel: {
+    color: '#FFFFFF',
+    opacity: 0.9,
+    fontSize: 12,
+  },
+  windValue: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  sunRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  sunItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  sunLabel: {
+    color: '#FFFFFF',
+    opacity: 0.9,
+    fontSize: 12,
+  },
+  sunValue: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    marginTop: 4,
   },
   tipsContainer: {
     gap: 12,

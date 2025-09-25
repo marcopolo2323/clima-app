@@ -1,5 +1,6 @@
 export interface WeatherData {
   temperature: number;
+  feelsLike?: number;
   humidity: number;
   windSpeed: number;
   windDirection: number;
@@ -9,6 +10,8 @@ export interface WeatherData {
   weatherCode: number;
   description: string;
   icon: string;
+  sunrise?: string; // ISO string
+  sunset?: string;  // ISO string
 }
 
 export interface ForecastData {
@@ -20,6 +23,15 @@ export interface ForecastData {
   icon: string;
   precipitation: number;
   windSpeed: number;
+}
+
+export interface HourlyData {
+  time: string; // ISO or YYYY-MM-DDTHH:00
+  hourLabel: string; // e.g., 10:00
+  temperature: number;
+  precipitationProb: number; // 0-100
+  weatherCode: number;
+  icon: string;
 }
 
 export interface LocationData {
@@ -85,10 +97,16 @@ const WEATHER_DESCRIPTIONS: { [key: number]: string } = {
 
 export class WeatherService {
   private static readonly BASE_URL = 'https://api.open-meteo.com/v1';
+  private static readonly USE_OPENWEATHER = process.env.EXPO_PUBLIC_USE_OPENWEATHER === '1';
+  private static readonly OPENWEATHER_KEY = process.env.EXPO_PUBLIC_OPENWEATHER_KEY || '';
 
   static async getCurrentWeather(latitude: number, longitude: number): Promise<WeatherData> {
     try {
-      const url = `${this.BASE_URL}/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,surface_pressure,visibility,uv_index,weather_code&timezone=auto`;
+      if (this.USE_OPENWEATHER && this.OPENWEATHER_KEY) {
+        const { owGetCurrentWeather } = await import('./providers/openWeather');
+        return await owGetCurrentWeather(latitude, longitude, this.OPENWEATHER_KEY);
+      }
+      const url = `${this.BASE_URL}/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,surface_pressure,visibility,uv_index,weather_code,precipitation,rain,showers,snowfall,cloud_cover,is_day,apparent_temperature&daily=sunrise,sunset&timezone=auto`;
       
       console.log('Fetching weather from URL:', url);
       
@@ -115,6 +133,27 @@ export class WeatherService {
       const current = data.current;
       const weatherCode = current.weather_code;
 
+      // Ajuste defensivo de descripción/ícono si hay precipitación o nubosidad alta
+      let description = WEATHER_DESCRIPTIONS[weatherCode] || 'Desconocido';
+      let icon = WEATHER_ICONS[weatherCode] || 'questionmark.circle.fill';
+
+      const precipitation = Number(current.precipitation ?? 0);
+      const rain = Number(current.rain ?? 0);
+      const showers = Number(current.showers ?? 0);
+      const snowfall = Number(current.snowfall ?? 0);
+      const cloudCover = Number(current.cloud_cover ?? 0);
+
+      if (snowfall > 0) {
+        description = 'Nieve';
+        icon = WEATHER_ICONS[71];
+      } else if (rain > 0 || showers > 0 || precipitation > 0) {
+        description = 'Lluvia';
+        icon = WEATHER_ICONS[63];
+      } else if (cloudCover >= 85 && (weatherCode === 0 || weatherCode === 1)) {
+        description = 'Nublado';
+        icon = WEATHER_ICONS[3];
+      }
+
       return {
         temperature: Math.round(current.temperature_2m),
         humidity: current.relative_humidity_2m,
@@ -124,8 +163,11 @@ export class WeatherService {
         visibility: current.visibility,
         uvIndex: current.uv_index,
         weatherCode,
-        description: WEATHER_DESCRIPTIONS[weatherCode] || 'Desconocido',
-        icon: WEATHER_ICONS[weatherCode] || 'questionmark.circle.fill',
+        description,
+        icon,
+        feelsLike: Math.round(current.apparent_temperature),
+        sunrise: data.daily?.sunrise?.[0],
+        sunset: data.daily?.sunset?.[0],
       };
     } catch (error) {
       console.error('Error fetching current weather:', error);
@@ -135,6 +177,16 @@ export class WeatherService {
 
   static async getForecast(latitude: number, longitude: number, days: number = 7): Promise<ForecastData[]> {
     try {
+      if (this.USE_OPENWEATHER && this.OPENWEATHER_KEY) {
+        const { owGetForecast } = await import('./providers/openWeather');
+        const out = await owGetForecast(latitude, longitude, days, this.OPENWEATHER_KEY);
+        // rellenar descripción/icon con nuestros mapas
+        return out.map(f => ({
+          ...f,
+          description: WEATHER_DESCRIPTIONS[f.weatherCode] || 'Desconocido',
+          icon: WEATHER_ICONS[f.weatherCode] || 'questionmark.circle.fill',
+        }));
+      }
       const response = await fetch(
         `${this.BASE_URL}/forecast?latitude=${latitude}&longitude=${longitude}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&timezone=auto&forecast_days=${days}`
       );
@@ -149,10 +201,14 @@ export class WeatherService {
       return daily.time.map((date: string, index: number) => {
         const weatherCode = daily.weather_code[index];
         
-        // Usar la fecha directamente de la API sin normalización
-        // La API ya devuelve fechas en formato YYYY-MM-DD
+        // La API ya devuelve fechas en la zona horaria correcta (America/Lima)
+        // Solo necesitamos usar la fecha tal como viene
+        const forecastDateString = String(date);
+
+        console.log(`📅 Fecha API: ${date}, Fecha Usada: ${forecastDateString}, Índice: ${index}`);
+
         return {
-          date: date,
+          date: forecastDateString,
           maxTemp: Math.round(daily.temperature_2m_max[index]),
           minTemp: Math.round(daily.temperature_2m_min[index]),
           weatherCode,
@@ -165,6 +221,48 @@ export class WeatherService {
     } catch (error) {
       console.error('Error fetching forecast:', error);
       throw new Error('No se pudo obtener el pronóstico');
+    }
+  }
+
+  static async getHourly(latitude: number, longitude: number, hours: number = 12): Promise<HourlyData[]> {
+    try {
+      if (this.USE_OPENWEATHER && this.OPENWEATHER_KEY) {
+        const { owGetHourly } = await import('./providers/openWeather');
+        return await owGetHourly(latitude, longitude, hours, this.OPENWEATHER_KEY);
+      }
+
+      // Open-Meteo hourly fallback
+      const response = await fetch(
+        `${this.BASE_URL}/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,precipitation_probability,weather_code&timezone=America%2FLima&forecast_hours=${Math.max(
+          hours,
+          12
+        )}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al obtener pronóstico por horas');
+      }
+
+      const data = await response.json();
+      const hourly = data.hourly;
+
+      const out: HourlyData[] = hourly.time.slice(0, hours).map((t: string, i: number) => {
+        const date = new Date(t);
+        const hourLabel = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        const weatherCode = Number(hourly.weather_code?.[i] ?? 0);
+        return {
+          time: t,
+          hourLabel,
+          temperature: Math.round(Number(hourly.temperature_2m?.[i] ?? 0)),
+          precipitationProb: Number(hourly.precipitation_probability?.[i] ?? 0),
+          weatherCode,
+          icon: WEATHER_ICONS[weatherCode] || 'questionmark.circle.fill',
+        };
+      });
+      return out;
+    } catch (error) {
+      console.error('Error fetching hourly:', error);
+      throw new Error('No se pudo obtener el pronóstico por horas');
     }
   }
 

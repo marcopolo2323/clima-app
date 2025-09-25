@@ -15,9 +15,10 @@ import Animated, {
 
 interface WeatherEffectsProps {
   weatherCode: number;
+  windSpeed?: number;
 }
 
-export function WeatherEffects({ weatherCode }: WeatherEffectsProps) {
+export function WeatherEffects({ weatherCode, windSpeed = 0 }: WeatherEffectsProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -26,6 +27,7 @@ export function WeatherEffects({ weatherCode }: WeatherEffectsProps) {
   const sunRays = useSharedValue(0);
   const cloudMove = useSharedValue(0);
   const lightningFlash = useSharedValue(0);
+  const windStrength = useSharedValue(0);
 
   useEffect(() => {
     console.log('🌤️ WeatherEffects - Código del clima:', weatherCode);
@@ -110,7 +112,17 @@ export function WeatherEffects({ weatherCode }: WeatherEffectsProps) {
     } else {
       lightningFlash.value = withTiming(0, { duration: 500 });
     }
-  }, [weatherCode]);
+    // Efecto de viento según velocidad
+    const normalizedWind = Math.min(Math.max(windSpeed / 50, 0), 1); // 0-1 aprox hasta 50 km/h
+    windStrength.value = withRepeat(
+      withSequence(
+        withTiming(normalizedWind, { duration: 1500, easing: Easing.inOut(Easing.sin) }),
+        withTiming(normalizedWind * 0.6, { duration: 1500, easing: Easing.inOut(Easing.sin) })
+      ),
+      -1,
+      true
+    );
+  }, [weatherCode, windSpeed]);
 
   const rainStyle = useAnimatedStyle(() => ({
     opacity: rainOpacity.value,
@@ -126,7 +138,7 @@ export function WeatherEffects({ weatherCode }: WeatherEffectsProps) {
   }));
 
   const cloudStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(cloudMove.value, [0, 1], [0, 50]) }],
+    transform: [{ translateX: interpolate(cloudMove.value, [0, 1], [0, 50 + windStrength.value * 50]) }],
   }));
 
   const lightningStyle = useAnimatedStyle(() => ({
@@ -182,6 +194,13 @@ export function WeatherEffects({ weatherCode }: WeatherEffectsProps) {
       {weatherCode >= 2 && weatherCode <= 3 && (
         <Animated.View style={[styles.cloudContainer, cloudStyle]}>
           <IconSymbol name="cloud.fill" size={80} color="rgba(169, 169, 169, 0.4)" />
+        </Animated.View>
+      )}
+
+      {/* Efecto de viento (nube soplando) cuando viento alto */}
+      {windSpeed >= 25 && (
+        <Animated.View style={[styles.windContainer, { opacity: 0.6 + windStrength.value * 0.4 }]}>
+          <IconSymbol name="wind" size={72} color="rgba(200, 200, 200, 0.6)" />
         </Animated.View>
       )}
 
@@ -256,5 +275,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 80,
     right: 30,
+  },
+  windContainer: {
+    position: 'absolute',
+    bottom: 60,
+    left: 30,
   },
 });

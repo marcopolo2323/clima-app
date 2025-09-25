@@ -4,15 +4,18 @@ import { GradientBackground } from '@/components/ui/GradientBackground';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ModernCard } from '@/components/ui/ModernCard';
 import { CitySearch } from '@/components/weather/CitySearch';
+import { DetailsPanel } from '@/components/weather/DetailsPanel';
 import { ForecastItem } from '@/components/weather/ForecastItem';
+import { HourlyForecast } from '@/components/weather/HourlyForecast';
 import { LoadingWeather } from '@/components/weather/LoadingWeather';
+import { LocationIndicator } from '@/components/weather/LocationIndicator';
 import { WeatherCard } from '@/components/weather/WeatherCard';
 import { Colors } from '@/constants/theme';
 import { useWeatherContext } from '@/contexts/WeatherContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useLocation } from '@/hooks/useLocation';
 import { ForecastData, LocationData, WeatherData, WeatherService } from '@/services/weatherService';
-import { debugDateInfo, isToday } from '@/utils/dateUtils';
+import { isToday, isTomorrow } from '@/utils/dateUtils';
 import React, { useEffect, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -20,10 +23,12 @@ export default function HomeScreen() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [forecast, setForecast] = useState<ForecastData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hourly, setHourly] = useState<import('@/services/weatherService').HourlyData[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showCitySearch, setShowCitySearch] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [lastLocationUpdate, setLastLocationUpdate] = useState<Date | null>(null);
   
   const { location: deviceLocation, loading: locationLoading, error: locationError, refreshLocation } = useLocation();
   const { selectedLocation, setSelectedLocation, currentLocation, setDeviceLocation } = useWeatherContext();
@@ -49,9 +54,10 @@ export default function HomeScreen() {
         setLoadingProgress(prev => Math.min(prev + 0.1, 0.8));
       }, 100);
 
-      const [currentWeather, forecastData] = await Promise.all([
+      const [currentWeather, forecastData, hourlyData] = await Promise.all([
         WeatherService.getCurrentWeather(location.latitude, location.longitude),
-        WeatherService.getForecast(location.latitude, location.longitude, 5)
+        WeatherService.getForecast(location.latitude, location.longitude, 5),
+        WeatherService.getHourly(location.latitude, location.longitude, 12),
       ]);
 
       clearInterval(progressInterval);
@@ -59,6 +65,8 @@ export default function HomeScreen() {
 
       setWeather(currentWeather);
       setForecast(forecastData);
+      setHourly(hourlyData);
+      setLastLocationUpdate(new Date());
       
       // Pequeño delay para mostrar el progreso completo
       setTimeout(() => {
@@ -246,6 +254,19 @@ export default function HomeScreen() {
           />
         )}
 
+        {/* Hourly forecast strip */}
+        {hourly.length > 0 && (
+          <ModernCard variant="elevated" style={styles.forecastContainer} padding="large" borderRadius="xl">
+            <View style={styles.forecastHeader}>
+              <View style={styles.forecastTitleContainer}>
+                <IconSymbol name="clock" size={24} color={colors.primary} />
+                <ThemedText type="subtitle" style={styles.forecastTitle}>Pronóstico por horas</ThemedText>
+              </View>
+            </View>
+            <HourlyForecast items={hourly} />
+          </ModernCard>
+        )}
+
         <ModernCard 
           variant="elevated" 
           style={styles.forecastContainer}
@@ -283,48 +304,38 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Indicador de ubicación actual */}
+          {/* Indicador de ubicación mejorado */}
           {currentLocation && (
-            <ModernCard 
-              variant="filled" 
-              style={styles.locationIndicator}
-              padding="small"
-              borderRadius="medium"
-            >
-              <View style={styles.locationIndicatorContent}>
-                <IconSymbol 
-                  name={selectedLocation ? "map.fill" : "location.fill"} 
-                  size={16} 
-                  color={colors.primary} 
-                />
-                <ThemedText style={styles.locationText}>
-                  {selectedLocation 
-                    ? `Ubicación personalizada: ${selectedLocation.name}${selectedLocation.country ? `, ${selectedLocation.country}` : ''}`
-                    : 'Ubicación actual'
-                  }
-                </ThemedText>
-              </View>
-            </ModernCard>
+            <LocationIndicator
+              location={currentLocation}
+              isCurrentLocation={!selectedLocation}
+              lastUpdated={lastLocationUpdate}
+            />
           )}
 
           <View style={styles.forecastList}>
-        {forecast.map((day, index) => {
-          // Debug: mostrar información de fechas
-          debugDateInfo(day.date, `Pronóstico ${index}`);
-          
-          // Determinar si es hoy usando la función utilitaria
-          const isTodayFlag = isToday(day.date);
-          
-          return (
-            <ForecastItem
-              key={day.date}
-              forecast={day}
-              isToday={isTodayFlag}
-            />
-          );
-        })}
+        {forecast
+          .filter((day) => !isToday(day.date)) // Filtrar el día de hoy
+          .map((day, index) => {
+            // Determinar si es mañana usando la función utilitaria
+            const isTomorrowFlag = isTomorrow(day.date);
+            
+            return (
+              <ForecastItem
+                key={day.date}
+                forecast={day}
+                isToday={false} // Ya no será hoy porque lo filtramos
+                isTomorrow={isTomorrowFlag}
+              />
+            );
+          })}
           </View>
         </ModernCard>
+
+        {/* Comfort level panel */}
+        {weather && (
+          <DetailsPanel humidity={weather.humidity} windSpeed={weather.windSpeed} uvIndex={weather.uvIndex} />
+        )}
 
 
         {/* Espaciado inferior */}

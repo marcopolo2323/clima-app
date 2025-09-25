@@ -34,9 +34,10 @@ const MAPPING = {
   'eye.fill': 'visibility',
   'sun.max.fill': 'wb-sunny',
   'moon.fill': 'nightlight-round',
-  'cloud.rain.fill': 'cloud-queue',
+  'cloud.rain.fill': 'grain',
   'cloud.snow.fill': 'ac-unit',
   'cloud.bolt.fill': 'flash-on',
+  'cloud.bolt.rain.fill': 'thunderstorm',
   'cloud.fog.fill': 'foggy',
 } as IconMapping;
 

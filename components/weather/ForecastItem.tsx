@@ -11,9 +11,10 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 interface ForecastItemProps {
   forecast: ForecastData;
   isToday?: boolean;
+  isTomorrow?: boolean;
 }
 
-export function ForecastItem({ forecast, isToday = false }: ForecastItemProps) {
+export function ForecastItem({ forecast, isToday = false, isTomorrow = false }: ForecastItemProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -22,15 +23,15 @@ export function ForecastItem({ forecast, isToday = false }: ForecastItemProps) {
     debugDateInfo(dateString, 'Pronóstico');
     
     // Usar la función utilitaria para formatear la fecha
-    return formatForecastDate(dateString, isToday);
+    return formatForecastDate(dateString, isToday, isTomorrow);
   };
 
   const getTemperatureColor = (temp: number) => {
-    if (temp < 0) return '#4A90E2';
-    if (temp < 10) return '#87CEEB';
-    if (temp < 20) return '#98FB98';
-    if (temp < 30) return '#FFD700';
-    return '#FF6347';
+    if (temp < 0) return colors.weather.clear;
+    if (temp < 10) return colors.weather.cloudy;
+    if (temp < 20) return colors.weather.clear;
+    if (temp < 30) return colors.weather.clear;
+    return colors.warning;
   };
 
   const getPrecipitationColor = (precip: number) => {
@@ -51,12 +52,6 @@ export function ForecastItem({ forecast, isToday = false }: ForecastItemProps) {
           <View style={styles.dateContainer}>
             <ThemedText style={[styles.date, isToday && styles.todayDate]}>
               {formatDate(forecast.date)}
-            </ThemedText>
-            <ThemedText style={styles.dateSubtext}>
-              {new Date(forecast.date).toLocaleDateString('es-ES', { 
-                day: 'numeric',
-                month: 'short'
-              })}
             </ThemedText>
           </View>
           
@@ -106,9 +101,6 @@ export function ForecastItem({ forecast, isToday = false }: ForecastItemProps) {
                 {forecast.minTemp}°
               </ThemedText>
             </View>
-            <ThemedText style={styles.tempLabel}>
-              {forecast.maxTemp}° / {forecast.minTemp}°
-            </ThemedText>
           </View>
         </View>
 
@@ -137,8 +129,9 @@ const styles = StyleSheet.create({
     marginVertical: 6,
   },
   todayContainer: {
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#007AFF',
+    backgroundColor: 'rgba(0, 122, 255, 0.05)',
   },
   header: {
     flexDirection: 'row',
@@ -178,7 +171,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   todayBadgeText: {
     color: 'white',

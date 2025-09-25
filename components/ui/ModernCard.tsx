@@ -26,14 +26,14 @@ export function ModernCard({
     switch (variant) {
       case 'elevated':
         return {
-          backgroundColor: 'rgba(255, 255, 255, 0.15)',
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.3)',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.3,
-          shadowRadius: 16,
-          elevation: 12,
+          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+          borderWidth: 0,
+          borderColor: 'transparent',
+          shadowColor: 'transparent',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          elevation: 0,
         };
       
       case 'outlined':
@@ -45,17 +45,26 @@ export function ModernCard({
       
       case 'filled':
         return {
-          backgroundColor: colors.surfaceVariant,
+          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+          borderWidth: 0,
+          borderColor: 'transparent',
+          shadowColor: 'transparent',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          elevation: 0,
         };
       
       default:
         return {
-          backgroundColor: colors.cardBackground,
-          shadowColor: colors.cardShadow,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          elevation: 4,
+          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+          shadowColor: 'transparent',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          elevation: 0,
+          borderWidth: 0,
+          borderColor: 'transparent',
         };
     }
   };
@@ -97,6 +106,6 @@ export function ModernCard({
 
 const styles = StyleSheet.create({
   container: {
-    overflow: 'hidden',
+    overflow: 'visible',
   },
 });

@@ -50,14 +50,15 @@ export function useLocation() {
         return;
       }
 
-      // Obtener ubicación actual con timeout
+      // Obtener ubicación actual con timeout más agresivo
       const location = await Promise.race([
         Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-          timeInterval: 10000, // 10 segundos
+          accuracy: Location.Accuracy.High,
+          timeInterval: 5000, // 5 segundos para respuesta más rápida
+          distanceInterval: 10, // Actualizar cada 10 metros
         }),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout de ubicación')), 15000)
+          setTimeout(() => reject(new Error('Timeout de ubicación')), 10000)
         )
       ]) as Location.LocationObject;
 
@@ -96,12 +97,42 @@ export function useLocation() {
     setLocation(newLocation);
   };
 
+  // Función para actualizar ubicación automáticamente cada 5 minutos
+  const startLocationTracking = () => {
+    const interval = setInterval(async () => {
+      try {
+        const newLocation = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 300000, // 5 minutos
+        });
+        
+        const reverseGeocode = await Location.reverseGeocodeAsync({
+          latitude: newLocation.coords.latitude,
+          longitude: newLocation.coords.longitude,
+        });
+
+        const address = reverseGeocode[0];
+        setLocation({
+          latitude: newLocation.coords.latitude,
+          longitude: newLocation.coords.longitude,
+          city: address?.city || address?.subregion || 'Ubicación desconocida',
+          country: address?.country || '',
+        });
+      } catch (err) {
+        console.log('Error en actualización automática de ubicación:', err);
+      }
+    }, 300000); // 5 minutos
+
+    return () => clearInterval(interval);
+  };
+
   return {
     location,
     loading,
     error,
     refreshLocation: getCurrentLocation,
     updateLocation,
+    startLocationTracking,
   };
 }
 

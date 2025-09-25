@@ -66,6 +66,7 @@ export function isTomorrow(dateString: string): boolean {
   tomorrow.setDate(today.getDate() + 1);
   
   const tomorrowString = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+  
   return dateString === tomorrowString;
 }
 
@@ -89,23 +90,29 @@ export function isYesterday(dateString: string): boolean {
  * @param isToday - Si es hoy (para mostrar "Hoy")
  * @returns Texto formateado para mostrar
  */
-export function formatForecastDate(dateString: string, isToday: boolean = false): string {
-  const forecastDate = normalizeDateToLocal(dateString);
-  const today = getTodayNormalized();
-  const diffDays = getDaysDifference(forecastDate, today);
-
-  if (isToday || diffDays === 0) {
+export function formatForecastDate(dateString: string, isToday: boolean = false, isTomorrowParam: boolean = false): string {
+  // Si ya sabemos que es hoy, devolver directamente
+  if (isToday) {
     return 'Hoy';
   }
 
-  if (diffDays === 1) {
+  // Si ya sabemos que es mañana, devolver directamente
+  if (isTomorrowParam) {
     return 'Mañana';
   }
 
-  if (diffDays === -1) {
+  // Verificar si es mañana usando la función isTomorrow
+  if (isTomorrow(dateString)) {
+    return 'Mañana';
+  }
+
+  // Verificar si es ayer usando la función isYesterday
+  if (isYesterday(dateString)) {
     return 'Ayer';
   }
 
+  // Para otros días, formatear la fecha
+  const forecastDate = new Date(dateString + 'T00:00:00');
   return forecastDate.toLocaleDateString('es-ES', { 
     weekday: 'short',
     day: 'numeric',
@@ -120,6 +127,7 @@ export function formatForecastDate(dateString: string, isToday: boolean = false)
  */
 export function debugDateInfo(dateString: string, context: string = 'Fecha'): void {
   const currentDate = getCurrentDateString();
+  const deviceTime = new Date();
   
   console.log(`🗓️ ${context}:`, {
     forecastDate: dateString,
@@ -127,6 +135,10 @@ export function debugDateInfo(dateString: string, context: string = 'Fecha'): vo
     isToday: isToday(dateString),
     isTomorrow: isTomorrow(dateString),
     isYesterday: isYesterday(dateString),
-    deviceTime: new Date().toLocaleString('es-ES')
+    deviceTime: deviceTime.toLocaleString('es-ES'),
+    deviceDate: deviceTime.getDate(),
+    deviceMonth: deviceTime.getMonth() + 1,
+    deviceYear: deviceTime.getFullYear(),
+    deviceDayOfWeek: deviceTime.toLocaleDateString('es-ES', { weekday: 'long' })
   });
 }
