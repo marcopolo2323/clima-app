@@ -1,17 +1,39 @@
+/**
+ * SERVICIO PRINCIPAL DE CLIMA
+ * ==========================
+ * 
+ * Este archivo contiene:
+ * - Interfaces TypeScript para todos los datos meteorológicos
+ * - Clase WeatherService que unifica múltiples APIs de clima
+ * - Mapeo de códigos meteorológicos a descripciones e íconos
+ * - Configuración de proveedores (Open-Meteo por defecto, OpenWeather opcional)
+ * 
+ * Arquitectura de proveedores:
+ * - Por defecto usa Open-Meteo (gratuito, sin API key)
+ * - Alternativamente puede usar OpenWeather con API key
+ * - Cambio de proveedor via variables de entorno sin modificar código
+ * 
+ * Datos soportados:
+ * - Clima actual (temperatura, humedad, viento, presión, UV, etc.)
+ * - Pronóstico de 7 días con máximas/mínimas
+ * - Pronóstico por horas (24 horas)
+ * - Amanecer/atardecer
+ */
+
 export interface WeatherData {
-  temperature: number;
-  feelsLike?: number;
-  humidity: number;
-  windSpeed: number;
-  windDirection: number;
-  pressure: number;
-  visibility: number;
-  uvIndex: number;
-  weatherCode: number;
-  description: string;
-  icon: string;
-  sunrise?: string; // ISO string
-  sunset?: string;  // ISO string
+  temperature: number;        // Temperatura actual en grados Celsius
+  feelsLike?: number;         // Sensación térmica
+  humidity: number;           // Humedad relativa (0-100%)
+  windSpeed: number;          // Velocidad del viento en km/h
+  windDirection: number;      // Dirección del viento en grados (0-360)
+  pressure: number;           // Presión atmosférica en hPa
+  visibility: number;         // Visibilidad en metros
+  uvIndex: number;            // Índice UV (0-11+)
+  weatherCode: number;        // Código meteorológico (Open-Meteo)
+  description: string;        // Descripción del clima en español
+  icon: string;               // Nombre del ícono SF Symbol
+  sunrise?: string;           // Amanecer en formato ISO string
+  sunset?: string;            // Atardecer en formato ISO string
 }
 
 export interface ForecastData {
@@ -35,10 +57,11 @@ export interface HourlyData {
 }
 
 export interface LocationData {
-  name: string;
-  country: string;
-  latitude: number;
-  longitude: number;
+  latitude: number;      // Latitud en grados decimales
+  longitude: number;     // Longitud en grados decimales
+  city?: string;         // Nombre de la ciudad (opcional)
+  country?: string;      // Nombre del país (opcional)
+  name?: string;         // Nombre completo de la ubicación (opcional, para compatibilidad)
 }
 
 const WEATHER_ICONS: { [key: number]: string } = {
@@ -96,12 +119,20 @@ const WEATHER_DESCRIPTIONS: { [key: number]: string } = {
 };
 
 export class WeatherService {
+  // Configuración de proveedores de clima
   private static readonly BASE_URL = 'https://api.open-meteo.com/v1';
   private static readonly USE_OPENWEATHER = process.env.EXPO_PUBLIC_USE_OPENWEATHER === '1';
   private static readonly OPENWEATHER_KEY = process.env.EXPO_PUBLIC_OPENWEATHER_KEY || '';
 
+  /**
+   * Obtiene el clima actual para una ubicación específica
+   * @param latitude Latitud de la ubicación
+   * @param longitude Longitud de la ubicación
+   * @returns Datos del clima actual
+   */
   static async getCurrentWeather(latitude: number, longitude: number): Promise<WeatherData> {
     try {
+      // Usar OpenWeather si está configurado, sino usar Open-Meteo por defecto
       if (this.USE_OPENWEATHER && this.OPENWEATHER_KEY) {
         const { owGetCurrentWeather } = await import('./providers/openWeather');
         return await owGetCurrentWeather(latitude, longitude, this.OPENWEATHER_KEY);
@@ -198,14 +229,19 @@ export class WeatherService {
       const data = await response.json();
       const daily = data.daily;
 
+      // Obtener la fecha actual del dispositivo
+      const today = new Date();
+      const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      
       return daily.time.map((date: string, index: number) => {
         const weatherCode = daily.weather_code[index];
         
-        // La API ya devuelve fechas en la zona horaria correcta (America/Lima)
-        // Solo necesitamos usar la fecha tal como viene
-        const forecastDateString = String(date);
+        // Adelantar un día para que las fechas coincidan correctamente
+        const adjustedDate = new Date(today);
+        adjustedDate.setDate(today.getDate() + index + 1);
+        const forecastDateString = `${adjustedDate.getFullYear()}-${String(adjustedDate.getMonth() + 1).padStart(2, '0')}-${String(adjustedDate.getDate()).padStart(2, '0')}`;
 
-        console.log(`📅 Fecha API: ${date}, Fecha Usada: ${forecastDateString}, Índice: ${index}`);
+        console.log(`📅 Fecha API: ${date}, Fecha Original: ${date}, Fecha Ajustada: ${forecastDateString}, Índice: ${index}`);
 
         return {
           date: forecastDateString,

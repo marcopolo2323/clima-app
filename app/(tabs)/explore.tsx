@@ -6,7 +6,6 @@ import { Colors } from '@/constants/theme';
 import { useWeatherContext } from '@/contexts/WeatherContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ForecastData, WeatherData, WeatherService } from '@/services/weatherService';
-import { isToday, isTomorrow } from '@/utils/dateUtils';
 import React, { useEffect, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -227,7 +226,7 @@ export default function ExploreScreen() {
           </View>
         </ModernCard>
 
-        {/* Pronóstico extendido */}
+        {/*  extendido */}
         <ModernCard 
           variant="elevated" 
           style={styles.section}
@@ -237,15 +236,15 @@ export default function ExploreScreen() {
           <View style={styles.sectionHeader}>
             <IconSymbol name="calendar" size={28} color={colors.secondary} />
             <ThemedText type="subtitle" style={styles.sectionTitle}>
-              Pronóstico 7 Días
+               7 Días
         </ThemedText>
           </View>
           <View style={styles.forecastContainer}>
             {forecast
               .map((day, index) => {
-                // Determinar si es hoy, mañana o otro día
-                const isTodayFlag = isToday(day.date);
-                const isTomorrowFlag = isTomorrow(day.date);
+                // El primer card siempre es "Hoy", el segundo "Mañana", etc.
+                const isTodayFlag = index === 0;
+                const isTomorrowFlag = index === 1;
                 
                 const date = new Date(day.date);
                 

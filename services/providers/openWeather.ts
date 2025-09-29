@@ -244,76 +244,54 @@ function mapWeatherCodeToOurCode(owId: number): number {
   return 2;
 }
 
-export async function owGetCurrentWeather(latitude: number, longitude: number, apiKey: string): Promise<WeatherData> {
-  const url = `${OPENWEATHER_BASE}/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric&lang=es`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`OpenWeather error ${res.status}`);
-  }
-  const data = await res.json();
-  const owId = data.weather?.[0]?.id ?? 800;
-  const ourCode = mapWeatherCodeToOurCode(owId);
 
-  return {
-    temperature: Math.round(data.main.temp),
-    humidity: data.main.humidity,
-    windSpeed: Math.round(data.wind.speed * 3.6), // m/s -> km/h
-    windDirection: data.wind.deg ?? 0,
-    pressure: data.main.pressure,
-    visibility: data.visibility ?? 10000,
-    uvIndex: 0,
-    weatherCode: ourCode,
-    description: data.weather?.[0]?.description ?? 'Desconocido',
-    icon: 'questionmark.circle.fill',
-  };
-}
 
-export async function owGetForecast(latitude: number, longitude: number, days: number, apiKey: string): Promise<ForecastData[]> {
-  const url = `${OPENWEATHER_BASE}/forecast?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric&lang=es`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`OpenWeather forecast error ${res.status}`);
-  }
-  const data = await res.json();
-  const list = data.list as any[];
-  const byDate: Record<string, { max: number; min: number; precip: number; wind: number; code: number } > = {};
-  for (const item of list) {
-    const date = new Date((item.dt + data.city.timezone) * 1000);
-    const y = date.getUTCFullYear();
-    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(date.getUTCDate()).padStart(2, '0');
-    const key = `${y}-${m}-${d}`;
-    const temp = item.main.temp as number;
-    const rain = (item.rain?.['3h'] ?? 0) as number;
-    const wind = (item.wind?.speed ?? 0) as number;
-    const code = mapWeatherCodeToOurCode(item.weather?.[0]?.id ?? 800);
-    if (!byDate[key]) {
-      byDate[key] = { max: temp, min: temp, precip: 0, wind: 0, code };
-    }
-    byDate[key].max = Math.max(byDate[key].max, temp);
-    byDate[key].min = Math.min(byDate[key].min, temp);
-    byDate[key].precip += rain;
-    byDate[key].wind = Math.max(byDate[key].wind, wind * 3.6);
-    // priorizar códigos de lluvia/tormenta
-    if (code >= 61 || code === 95) byDate[key].code = code;
-  }
+// export async function owGetForecast(latitude: number, longitude: number, days: number, apiKey: string): Promise<ForecastData[]> {
+//   const url = `${OPENWEATHER_BASE}/forecast?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric&lang=es`;
+//   const res = await fetch(url);
+//   if (!res.ok) {
+//     throw new Error(`OpenWeather forecast error ${res.status}`);
+//   }
+//   const data = await res.json();
+//   const list = data.list as any[];
+//   const byDate: Record<string, { max: number; min: number; precip: number; wind: number; code: number } > = {};
+//   for (const item of list) {
+//     const date = new Date((item.dt + data.city.timezone) * 1000);
+//     const y = date.getUTCFullYear();
+//     const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+//     const d = String(date.getUTCDate()).padStart(2, '0');
+//     const key = `${y}-${m}-${d}`;
+//     const temp = item.main.temp as number;
+//     const rain = (item.rain?.['3h'] ?? 0) as number;
+//     const wind = (item.wind?.speed ?? 0) as number;
+//     const code = mapWeatherCodeToOurCode(item.weather?.[0]?.id ?? 800);
+//     if (!byDate[key]) {
+//       byDate[key] = { max: temp, min: temp, precip: 0, wind: 0, code };
+//     }
+//     byDate[key].max = Math.max(byDate[key].max, temp);
+//     byDate[key].min = Math.min(byDate[key].min, temp);
+//     byDate[key].precip += rain;
+//     byDate[key].wind = Math.max(byDate[key].wind, wind * 3.6);
+//     // priorizar códigos de lluvia/tormenta
+//     if (code >= 61 || code === 95) byDate[key].code = code;
+//   }
 
-  const dates = Object.keys(byDate).sort();
-  const out: ForecastData[] = [];
-  for (const key of dates.slice(0, days)) {
-    const v = byDate[key];
-    out.push({
-      date: key,
-      maxTemp: Math.round(v.max),
-      minTemp: Math.round(v.min),
-      weatherCode: v.code,
-      description: '',
-      icon: '',
-      precipitation: Number(v.precip.toFixed(1)),
-      windSpeed: Math.round(v.wind),
-    });
-  }
-  return out;
-}
+//   const dates = Object.keys(byDate).sort();
+//   const out: ForecastData[] = [];
+//   for (const key of dates.slice(0, days)) {
+//     const v = byDate[key];
+//     out.push({
+//       date: key,
+//       maxTemp: Math.round(v.max),
+//       minTemp: Math.round(v.min),
+//       weatherCode: v.code,
+//       description: '',
+//       icon: '',
+//       precipitation: Number(v.precip.toFixed(1)),
+//       windSpeed: Math.round(v.wind),
+//     });
+//   }
+//   return out;
+// }
 
 

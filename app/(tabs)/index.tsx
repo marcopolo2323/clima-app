@@ -1,10 +1,34 @@
+/**
+ * PANTALLA PRINCIPAL DEL CLIMA
+ * ============================
+ * 
+ * Esta es la pantalla principal de la aplicación que muestra:
+ * - Tarjeta principal del clima actual con animaciones
+ * - Pronóstico por horas (24 horas)
+ * - Pronóstico de 7 días
+ * - Panel de detalles con métricas meteorológicas
+ * - Búsqueda de ciudades
+ * - Indicador de ubicación actual
+ * 
+ * Flujo de datos:
+ * 1. useLocation obtiene ubicación del GPS
+ * 2. useWeatherContext gestiona ubicación seleccionada/actual
+ * 3. WeatherService obtiene datos del clima cuando cambia la ubicación
+ * 4. Componentes UI reaccionan a los cambios de datos
+ * 
+ * Estados manejados:
+ * - loading: Estado de carga inicial
+ * - refreshing: Estado de pull-to-refresh
+ * - error: Errores de obtención de datos
+ * - showCitySearch: Modal de búsqueda de ciudades
+ */
+
 import { ThemedText } from '@/components/themed-text';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ModernCard } from '@/components/ui/ModernCard';
 import { CitySearch } from '@/components/weather/CitySearch';
-import { DetailsPanel } from '@/components/weather/DetailsPanel';
 import { ForecastItem } from '@/components/weather/ForecastItem';
 import { HourlyForecast } from '@/components/weather/HourlyForecast';
 import { LoadingWeather } from '@/components/weather/LoadingWeather';
@@ -15,7 +39,6 @@ import { useWeatherContext } from '@/contexts/WeatherContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useLocation } from '@/hooks/useLocation';
 import { ForecastData, LocationData, WeatherData, WeatherService } from '@/services/weatherService';
-import { isToday, isTomorrow } from '@/utils/dateUtils';
 import React, { useEffect, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -28,7 +51,7 @@ export default function HomeScreen() {
   const [showCitySearch, setShowCitySearch] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [lastLocationUpdate, setLastLocationUpdate] = useState<Date | null>(null);
+  const [lastLocationUpdate, setLastLocationUpdate] = useState<Date | undefined>(undefined);
   
   const { location: deviceLocation, loading: locationLoading, error: locationError, refreshLocation } = useLocation();
   const { selectedLocation, setSelectedLocation, currentLocation, setDeviceLocation } = useWeatherContext();
@@ -315,16 +338,16 @@ export default function HomeScreen() {
 
           <View style={styles.forecastList}>
         {forecast
-          .filter((day) => !isToday(day.date)) // Filtrar el día de hoy
           .map((day, index) => {
-            // Determinar si es mañana usando la función utilitaria
-            const isTomorrowFlag = isTomorrow(day.date);
+            // El primer card es "Hoy", el segundo "Mañana", etc.
+            const isTodayFlag = index === 0;
+            const isTomorrowFlag = index === 1;
             
             return (
               <ForecastItem
                 key={day.date}
                 forecast={day}
-                isToday={false} // Ya no será hoy porque lo filtramos
+                isToday={isTodayFlag}
                 isTomorrow={isTomorrowFlag}
               />
             );
@@ -332,10 +355,6 @@ export default function HomeScreen() {
           </View>
         </ModernCard>
 
-        {/* Comfort level panel */}
-        {weather && (
-          <DetailsPanel humidity={weather.humidity} windSpeed={weather.windSpeed} uvIndex={weather.uvIndex} />
-        )}
 
 
         {/* Espaciado inferior */}

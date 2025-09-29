@@ -4,7 +4,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ForecastData } from '@/services/weatherService';
-import { debugDateInfo, formatForecastDate } from '@/utils/dateUtils';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -19,11 +18,20 @@ export function ForecastItem({ forecast, isToday = false, isTomorrow = false }: 
   const colors = Colors[colorScheme ?? 'light'];
 
   const formatDate = (dateString: string) => {
-    // Debug: mostrar información de fechas
-    debugDateInfo(dateString, 'Pronóstico');
+    // Usar lógica simple basada en las props
+    if (isToday) {
+      return 'Hoy';
+    }
+    if (isTomorrow) {
+      return 'Mañana';
+    }
     
-    // Usar la función utilitaria para formatear la fecha
-    return formatForecastDate(dateString, isToday, isTomorrow);
+    // Para otros días, mostrar el día de la semana (atrasado un día para el tab de clima)
+    const date = new Date(dateString + 'T00:00:00');
+    date.setDate(date.getDate() - 1); // Atrasar un día para el tab de clima
+    return date.toLocaleDateString('es-ES', { 
+      weekday: 'short'
+    });
   };
 
   const getTemperatureColor = (temp: number) => {
@@ -53,13 +61,15 @@ export function ForecastItem({ forecast, isToday = false, isTomorrow = false }: 
             <ThemedText style={[styles.date, isToday && styles.todayDate]}>
               {formatDate(forecast.date)}
             </ThemedText>
+            <ThemedText style={styles.dateSubtext}>
+              {(() => {
+                const date = new Date(forecast.date + 'T00:00:00');
+                date.setDate(date.getDate() - 1); // Atrasar un día para el tab de clima
+                return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+              })()}
+            </ThemedText>
           </View>
           
-          {isToday && (
-            <View style={styles.todayBadge}>
-              <ThemedText style={styles.todayBadgeText}>HOY</ThemedText>
-            </View>
-          )}
         </View>
 
         <View style={styles.weatherSection}>

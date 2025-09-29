@@ -1,3 +1,21 @@
+/**
+ * TARJETA PRINCIPAL DEL CLIMA
+ * ==========================
+ * 
+ * Componente principal que muestra la información del clima actual:
+ * - Fondo inteligente que cambia según el clima y temperatura
+ * - Animaciones meteorológicas (sol, lluvia, nieve, etc.)
+ * - Efectos visuales (partículas, rayos, viento)
+ * - Información principal: ciudad, temperatura, descripción
+ * - Datos secundarios: sensación térmica, rango de temperatura
+ * 
+ * Características:
+ * - Diseño responsivo adaptativo
+ * - Colores de temperatura dinámicos
+ * - Integración con sistema de temas
+ * - Animaciones fluidas y atractivas
+ */
+
 import { ThemedText } from '@/components/themed-text';
 import { ModernCard } from '@/components/ui/ModernCard';
 import { Colors } from '@/constants/theme';

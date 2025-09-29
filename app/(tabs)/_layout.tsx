@@ -1,3 +1,18 @@
+/**
+ * LAYOUT DE NAVEGACIÓN POR TABS
+ * =============================
+ * 
+ * Configura la navegación por pestañas de la aplicación:
+ * - Tab "Clima": Pantalla principal con datos meteorológicos
+ * - Tab "Detalles": Información extendida y pronóstico de 7 días
+ * 
+ * Características:
+ * - Colores adaptativos según el tema (claro/oscuro)
+ * - Iconos SF Symbols para cada tab
+ * - Feedback háptico en las pestañas
+ * - Headers ocultos para interfaz limpia
+ */
+
 import { Tabs } from 'expo-router';
 import React from 'react';
 

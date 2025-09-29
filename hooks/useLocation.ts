@@ -1,11 +1,35 @@
+/**
+ * HOOK DE UBICACIÓN
+ * ================
+ * 
+ * Este hook maneja la obtención y gestión de la ubicación del dispositivo:
+ * - Solicita permisos de ubicación al usuario
+ * - Obtiene coordenadas GPS con alta precisión
+ * - Realiza geocodificación inversa para obtener nombre de ciudad/país
+ * - Incluye fallback a ubicación por defecto (Pucallpa, Perú) si no hay permisos
+ * - Permite actualización manual y automática de ubicación
+ * 
+ * Funcionalidades:
+ * - getCurrentLocation(): Obtiene ubicación actual una vez
+ * - refreshLocation(): Función pública para refrescar ubicación
+ * - updateLocation(): Setter directo para actualizar ubicación
+ * - startLocationTracking(): Actualización automática cada 5 minutos
+ * 
+ * Estados de error manejados:
+ * - Servicios de ubicación deshabilitados
+ * - Permisos denegados por el usuario
+ * - Timeout de obtención de ubicación
+ * - Errores de geocodificación
+ */
+
 import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
 
 export interface LocationData {
-  latitude: number;
-  longitude: number;
-  city?: string;
-  country?: string;
+  latitude: number;      // Latitud en grados decimales
+  longitude: number;     // Longitud en grados decimales
+  city?: string;         // Nombre de la ciudad (opcional)
+  country?: string;      // Nombre del país (opcional)
 }
 
 export function useLocation() {
@@ -22,11 +46,11 @@ export function useLocation() {
       setLoading(true);
       setError(null);
 
-      // Verificar si los servicios de ubicación están disponibles
+      // Verificar si los servicios de ubicación están habilitados en el dispositivo
       const isLocationEnabled = await Location.hasServicesEnabledAsync();
       if (!isLocationEnabled) {
         console.warn('Servicios de ubicación deshabilitados, usando ubicación por defecto');
-        // Usar Pucallpa, Perú como ubicación por defecto
+        // Fallback a Pucallpa, Perú como ubicación por defecto
         setLocation({
           latitude: -8.3833,
           longitude: -74.5333,
